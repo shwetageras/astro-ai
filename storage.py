@@ -55,3 +55,19 @@ def save_file(file_bytes, file_id):
     print(f"Uploaded to S3: {file_id}")
     
     return file_id
+
+def save_kb_to_s3(kb_data, file_id):
+    import io
+
+    # convert JSON to bytes
+    json_bytes = json.dumps(kb_data).encode("utf-8")
+
+    file_obj = io.BytesIO(json_bytes)
+
+    s3.upload_fileobj(
+        file_obj,
+        BUCKET_NAME,
+        f"kb/{file_id}.json"   # store inside kb/ folder in S3
+    )
+
+    print(f"KB uploaded to S3: kb/{file_id}.json")
