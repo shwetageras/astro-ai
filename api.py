@@ -53,7 +53,7 @@ from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
-from notifier import notify_completion
+from notifier import notify_completion, notify_embedding_status
 
 from db import insert_job, get_job, update_job
 from vector_db import upsert_embeddings
@@ -75,8 +75,13 @@ def process_pdf(file_bytes, file_id, file_name, job_id):
         text = read_pdf(temp_file_path)
         chunks = chunk_text(text)
         embeddings = create_embeddings(chunks)
-        kb = build_kb(chunks, embeddings)
         upsert_embeddings(file_id, chunks, embeddings)
+        
+        embedding_size = len(embeddings)
+        notify_embedding_status(file_id, embedding_size)
+
+        kb = build_kb(chunks, embeddings)
+        
 
         save_kb(kb, file_id)
         save_metadata(file_id, file_name, int(time.time()))
