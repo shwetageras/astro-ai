@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 
 def notify_completion(file_id):
     
@@ -14,14 +15,14 @@ def notify_completion(file_id):
         print("Notification sent:", response.status_code)
     except Exception as e:
         print("Notification failed:", str(e))
-
-
+ 
 def notify_embedding_status(file_id, embedding_size):
-    url = "https://api.xtrology.ai/charts/charts_status.php"
+    url = "https://api.xtrology.ai/kb/kb_status.php"   
     
     payload = {
         "file_id": file_id,
         "status": "embedded",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  
         "embedded_size": embedding_size
     }
 
