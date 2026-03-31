@@ -1,6 +1,12 @@
 import requests
 import time
 from datetime import datetime
+import pytz
+
+ist = pytz.timezone("Asia/Kolkata")
+
+created_at_str = datetime.fromtimestamp(created_at, ist).strftime("%Y-%m-%d %H:%M:%S")
+completed_at_str = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
 def notify_embedding_status(file_id, job_id, created_at, file_name):
 
@@ -11,9 +17,10 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
         "file_id": file_id,
         "file_name": file_name,
         "status": "completed",
-        "created_at": datetime.fromtimestamp(created_at).strftime("%Y-%m-%d %H:%M:%S"),
-        "completed_at": datetime.fromtimestamp(int(time.time())).strftime("%Y-%m-%d %H:%M:%S"),
-        "error": None
+        "created_at": created_at_str,
+        "completed_at": completed_at_str,
+        "error": None,
+        "s3_url": f"https://your-bucket.s3.amazonaws.com/{file_id}"  # optional
     }
 
     print("Sending payload:", payload)
