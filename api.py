@@ -104,10 +104,14 @@ from fastapi import Form
 async def upload_pdf(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    job_id: str = Form(...),
-    file_id: str = Form(...)
 ):
+    import time
+
     timestamp = int(time.time())
+
+    # ✅ ADD THESE 2 LINES
+    file_id = f"{timestamp}_{file.filename}"
+    job_id = f"job_{timestamp}"
 
     # Read file
     file_bytes = await file.read()
@@ -118,10 +122,17 @@ async def upload_pdf(
     # Store job info
     insert_job(job_id, file_id, file.filename, "processing", timestamp)
 
-    # 🔥 Run processing in background
-    background_tasks.add_task(process_pdf, file_bytes, file_id, file.filename, job_id, timestamp)
+    # Run processing in background
+    background_tasks.add_task(
+        process_pdf,
+        file_bytes,
+        file_id,
+        file.filename,
+        job_id,
+        timestamp
+    )
 
-    # Immediate response
+    # Response
     return {
         "job_id": job_id,
         "status": "processing"
