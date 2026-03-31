@@ -77,17 +77,15 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
         embeddings = create_embeddings(chunks)
         upsert_embeddings(file_id, chunks, embeddings)
         
-        embedding_size = len(embeddings)
-        notify_embedding_status(file_id, job_id, file_id, timestamp)
-
         kb = build_kb(chunks, embeddings)
-        
-
         save_kb(kb, file_id)
         save_metadata(file_id, file_name, int(time.time()))
 
-        # Update job status
+        # Update job first
         update_job(job_id, "completed", int(time.time()))
+
+        # 🔥 THEN notify
+        notify_embedding_status(file_id, job_id, file_id, timestamp)
 
     except Exception as e:
         print(f"Error processing job {job_id}: {e}")
@@ -100,13 +98,16 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
 
 
 # 🔥 UPDATED API ENDPOINT (Step 2C)
+from fastapi import Form
+
 @app.post("/upload_pdf")
-async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    
-    # Create unique IDs
+async def upload_pdf(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    job_id: str = Form(...),
+    file_id: str = Form(...)
+):
     timestamp = int(time.time())
-    file_id = f"{timestamp}_{file.filename}"
-    job_id = f"job_{timestamp}"
 
     # Read file
     file_bytes = await file.read()
