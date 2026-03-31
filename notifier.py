@@ -1,16 +1,13 @@
-import requests
-import time
 from datetime import datetime
-import pytz
-
-ist = pytz.timezone("Asia/Kolkata")
-
-created_at_str = datetime.fromtimestamp(created_at, ist).strftime("%Y-%m-%d %H:%M:%S")
-completed_at_str = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+from zoneinfo import ZoneInfo
+import requests
 
 def notify_embedding_status(file_id, job_id, created_at, file_name):
 
-    url = "https://api.xtrology.ai/kb/kb_status.php"
+    ist = ZoneInfo("Asia/Kolkata")
+
+    created_at_str = datetime.fromtimestamp(created_at, ist).strftime("%Y-%m-%d %H:%M:%S")
+    completed_at_str = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
     payload = {
         "job_id": job_id,
@@ -19,13 +16,12 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
         "status": "completed",
         "created_at": created_at_str,
         "completed_at": completed_at_str,
-        "error": None,
-        "s3_url": f"https://your-bucket.s3.amazonaws.com/{file_id}"  # optional
+        "error": None
     }
 
-    print("Sending payload:", payload)
-
-    # 🔥 FIXED LINE
-    response = requests.post(url, json=payload)
+    response = requests.post(
+        "https://api.xtrology.ai/kb/kb_status.php",
+        json=payload
+    )
 
     print("Callback response:", response.text)
