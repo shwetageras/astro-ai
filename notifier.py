@@ -1,14 +1,17 @@
 import requests
-from datetime import datetime
+import time
 
-def notify_embedding_status(file_id, embedding_size):
+def notify_embedding_status(file_id, job_id, file_name, created_at):
     url = "https://api.xtrology.ai/kb/kb_status.php"   
     
     payload = {
+        "job_id": job_id,
         "file_id": file_id,
-        "status": "embedded",
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  
-        "embedded_size": embedding_size
+        "file_name": file_name,
+        "status": "completed",   # ✅ IMPORTANT CHANGE
+        "created_at": created_at,
+        "completed_at": int(time.time()),
+        "error": None
     }
 
     try:

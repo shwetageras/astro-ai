@@ -53,7 +53,7 @@ from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
-from notifier import notify_completion, notify_embedding_status
+from notifier import notify_embedding_status
 
 from db import insert_job, get_job, update_job
 from vector_db import upsert_embeddings
@@ -63,7 +63,7 @@ from kb_builder import client
 app = FastAPI()
 
 # 🔥 BACKGROUND FUNCTION (Step 2B)
-def process_pdf(file_bytes, file_id, file_name, job_id):
+def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
     try:
         # Create temp file
         temp_file_path = f"temp_{file_id}"
@@ -78,15 +78,13 @@ def process_pdf(file_bytes, file_id, file_name, job_id):
         upsert_embeddings(file_id, chunks, embeddings)
         
         embedding_size = len(embeddings)
-        notify_embedding_status(file_id, embedding_size)
+        notify_embedding_status(file_id, job_id, file_id, timestamp)
 
         kb = build_kb(chunks, embeddings)
         
 
         save_kb(kb, file_id)
         save_metadata(file_id, file_name, int(time.time()))
-
-        notify_completion(file_id)
 
         # Update job status
         update_job(job_id, "completed", int(time.time()))
@@ -120,7 +118,7 @@ async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(
     insert_job(job_id, file_id, file.filename, "processing", timestamp)
 
     # 🔥 Run processing in background
-    background_tasks.add_task(process_pdf, file_bytes, file_id, file.filename, job_id)
+    background_tasks.add_task(process_pdf, file_bytes, file_id, file.filename, job_id, timestamp)
 
     # Immediate response
     return {
