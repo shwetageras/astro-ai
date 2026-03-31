@@ -85,7 +85,7 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
         update_job(job_id, "completed", int(time.time()))
 
         # 🔥 THEN notify
-        notify_embedding_status(file_id, job_id, timestamp)
+        notify_embedding_status(file_id, job_id, timestamp, file_name)
 
     except Exception as e:
         print(f"Error processing job {job_id}: {e}")
