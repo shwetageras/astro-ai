@@ -8,7 +8,7 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
 
     payload = {
         "job_id": job_id,
-        "file_id": file_name,
+        "file_id": file_id,
         "file_name": file_name,
         "status": "completed",
         "created_at": datetime.fromtimestamp(created_at).strftime("%Y-%m-%d %H:%M:%S"),
@@ -16,6 +16,9 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
         "error": None
     }
 
-    response = requests.post(url, data=payload)
-
     print("Sending payload:", payload)
+
+    # 🔥 FIXED LINE
+    response = requests.post(url, json=payload)
+
+    print("Callback response:", response.text)
