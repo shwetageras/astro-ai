@@ -18,4 +18,4 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
 
     response = requests.post(url, data=payload)
 
-    print("Callback response:", response.text)
+    print("Sending payload:", payload)
