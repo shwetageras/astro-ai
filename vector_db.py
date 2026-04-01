@@ -22,7 +22,7 @@ if INDEX_NAME not in [index.name for index in pc.list_indexes()]:
 
 index = pc.Index(INDEX_NAME)
 
-def upsert_embeddings(file_id, chunks, embeddings):
+def upsert_embeddings(file_id, chunks, embeddings, metadata=None):
     vectors = []
 
     for i in range(len(chunks)):
@@ -31,7 +31,8 @@ def upsert_embeddings(file_id, chunks, embeddings):
             "values": embeddings[i],
             "metadata": {
                 "text": chunks[i],
-                "file_id": file_id
+                "file_id": file_id,
+                **(metadata or {})   
             }
         })
 
