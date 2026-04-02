@@ -13,6 +13,7 @@ from kb_builder import client
 from fastapi import Form
 from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
+from db import insert_qna
 
 app = FastAPI()
 
@@ -214,4 +215,30 @@ async def upload_chart(
     return {
         "job_id": job_id,
         "status": "processing"
+    }
+
+
+from pydantic import BaseModel
+
+class QuestionRequest(BaseModel):
+    user_id: int
+    profile_id: int
+    chart_id: int
+    question: str
+
+
+@app.post("/ask_question")
+def ask_question(request: QuestionRequest):
+
+    # ✅ Store in DB
+    insert_qna(
+        request.user_id,
+        request.profile_id,
+        request.chart_id,
+        request.question
+    )
+
+    # ✅ Dummy response
+    return {
+        "answer": "Thank you, your question has been received. We will get back shortly."
     }

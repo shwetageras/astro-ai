@@ -133,3 +133,21 @@ def update_chart_job(job_id, status, completed_at=None, error=None):
     conn.commit()
     cursor.close()
     conn.close()
+
+
+# -------------------------------
+# QnA LOG FUNCTIONS
+# -------------------------------
+
+def insert_qna(user_id, profile_id, chart_id, question):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO qna_logs (user_id, profile_id, chart_id, question)
+        VALUES (%s, %s, %s, %s)
+    """, (user_id, profile_id, chart_id, question))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
