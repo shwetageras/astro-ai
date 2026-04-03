@@ -22,7 +22,7 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
 
     try:
         response = requests.post(
-            "https://api.xtrology.ai/kb/kb_status.php",
+            "https://api.xtrology.ai/admin/kb/kb_status.php",
             json=payload,
             timeout=10
         )
@@ -38,7 +38,7 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
 
 def notify_chart_status(job_id, chart_id, file_id):
 
-    url = "https://api.xtrology.ai/charts/charts_status.php"
+    url = "https://api.xtrology.ai/app/charts/charts_status.php"
 
     payload = {
         "job_id": job_id,

@@ -13,7 +13,8 @@ from kb_builder import client
 from fastapi import Form
 from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
-from db import insert_qna
+from vector_db import query_chart_embeddings, query_kb_embeddings
+from db import insert_qna, update_qna_answer
 
 app = FastAPI()
 
@@ -95,6 +96,46 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+def build_context(chart_results, kb_results):
+    context = ""
+
+    if "matches" in chart_results:
+        for match in chart_results["matches"]:
+            context += match["metadata"]["text"] + "\n"
+
+    if "matches" in kb_results:
+        for match in kb_results["matches"]:
+            context += match["metadata"]["text"] + "\n"
+
+    # Limit context size avoids LLM overload
+    context = context[:3000]
+
+    return context
+
+
+def generate_answer(question, context):
+    prompt = f"""
+You are an expert astrologer.
+
+Use the context below to answer the question.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful astrologer."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    return response.choices[0].message.content
 
 # Create API → /upload_pdf
 @app.post("/upload_pdf")
@@ -230,15 +271,41 @@ class QuestionRequest(BaseModel):
 @app.post("/ask_question")
 def ask_question(request: QuestionRequest):
 
-    # ✅ Store in DB
-    insert_qna(
+    # 1. Store question
+    qna_id = insert_qna(
         request.user_id,
         request.profile_id,
         request.chart_id,
         request.question
     )
 
-    # ✅ Dummy response
+    # 2. Embed question
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=request.question
+    )
+    query_embedding = response.data[0].embedding
+
+    # 3. Retrieve context
+    chart_results = query_chart_embeddings(
+        query_embedding,
+        request.user_id,
+        request.profile_id,
+        request.chart_id
+    )
+
+    kb_results = query_kb_embeddings(query_embedding)
+
+    # 4. Build context
+    context = build_context(chart_results, kb_results)
+
+    # 5. Generate answer
+    answer = generate_answer(request.question, context)
+
+    # 6. Store answer
+    update_qna_answer(qna_id, answer)
+
+    # 7. Return answer
     return {
-        "answer": "Thank you, your question has been received. We will get back shortly."
+        "answer": answer
     }

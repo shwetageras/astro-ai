@@ -146,7 +146,27 @@ def insert_qna(user_id, profile_id, chart_id, question):
     cursor.execute("""
         INSERT INTO qna_logs (user_id, profile_id, chart_id, question)
         VALUES (%s, %s, %s, %s)
+        RETURNING id
     """, (user_id, profile_id, chart_id, question))
+
+    qna_id = cursor.fetchone()[0]
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return qna_id
+
+
+def update_qna_answer(qna_id, answer):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE qna_logs
+        SET answer = %s
+        WHERE id = %s
+    """, (answer, qna_id))
 
     conn.commit()
     cursor.close()

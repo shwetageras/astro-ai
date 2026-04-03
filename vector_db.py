@@ -45,3 +45,29 @@ def query_embeddings(query_embedding, top_k=5):
         include_metadata=True
     )
     return results
+
+
+def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=3):
+    results = index.query(
+        vector=query_embedding,
+        top_k=top_k,
+        include_metadata=True,
+        filter={
+            "user_id": user_id,
+            "profile_id": profile_id,
+            "chart_id": chart_id
+        }
+    )
+    return results
+
+
+def query_kb_embeddings(query_embedding, top_k=2):
+    results = index.query(
+        vector=query_embedding,
+        top_k=top_k,
+        include_metadata=True,
+        filter={
+            "user_id": {"$exists": False}
+        }
+    )
+    return results
