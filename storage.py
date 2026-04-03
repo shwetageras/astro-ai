@@ -77,6 +77,6 @@ def delete_file(file_id):
     s3 = boto3.client("s3")
 
     s3.delete_object(
-        Bucket="your-bucket-name",
+        Bucket="xtrology-genai-data",
         Key=file_id
     )
