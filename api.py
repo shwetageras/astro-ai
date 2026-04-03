@@ -22,7 +22,7 @@ app = FastAPI()
 def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
     try:
         # Create temp file
-        temp_file_path = f"temp_{file_id}"
+        temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
 
         with open(temp_file_path, "wb") as f:
             f.write(file_bytes)
@@ -67,7 +67,7 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
 # BACKGROUND FUNCTION FOR upload_chart
 def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
     try:
-        temp_file_path = f"temp_{file_id}"
+        temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
 
         with open(temp_file_path, "wb") as f:
             f.write(file_bytes)
