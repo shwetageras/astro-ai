@@ -28,7 +28,18 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
             f.write(file_bytes)
 
         # Run pipeline
-        text = read_pdf(temp_file_path)
+        file_ext = file_name.split(".")[-1].lower()
+
+        if file_ext == "pdf":
+            text = read_pdf(temp_file_path)
+
+        elif file_ext in ["md", "txt"]:
+            from kb_builder import read_text_file
+            text = read_text_file(temp_file_path)
+
+        else:
+            raise Exception(f"Unsupported file type: {file_ext}")
+        
         chunks = chunk_text(text)
         embeddings = create_embeddings(chunks)
         upsert_embeddings(file_id, chunks, embeddings)
@@ -62,7 +73,18 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
             f.write(file_bytes)
 
         # SAME pipeline as PDF
-        text = read_pdf(temp_file_path)
+        file_ext = file_name.split(".")[-1].lower()
+
+        if file_ext == "pdf":
+            text = read_pdf(temp_file_path)
+
+        elif file_ext in ["md", "txt"]:
+            from kb_builder import read_text_file
+            text = read_text_file(temp_file_path)
+
+        else:
+            raise Exception(f"Unsupported file type: {file_ext}")
+
         chunks = chunk_text(text)
         embeddings = create_embeddings(chunks)
 
