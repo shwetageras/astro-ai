@@ -15,6 +15,7 @@ from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
 from vector_db import query_chart_embeddings, query_kb_embeddings
 from db import insert_qna, update_qna_answer
+from fastapi import HTTPException
 
 app = FastAPI()
 
@@ -161,6 +162,23 @@ Question:
 
     return response.choices[0].message.content
 
+from pydantic import BaseModel
+
+class QueryRequest(BaseModel):
+    query: str
+
+
+class QuestionRequest(BaseModel):
+    user_id: int
+    profile_id: int
+    chart_id: int
+    question: str
+
+
+class DeleteKBRequest(BaseModel):   
+    job_id: str
+
+
 # Create API → /upload_pdf
 @app.post("/upload_pdf")
 async def upload_pdf(
@@ -207,12 +225,6 @@ def get_status(job_id: str):
         return {"error": "Job not found"}
 
     return job
-
-from pydantic import BaseModel
-
-class QueryRequest(BaseModel):
-    query: str
-
 
 @app.post("/query")
 def query_docs(request: QueryRequest):
@@ -283,15 +295,6 @@ async def upload_chart(
     }
 
 
-from pydantic import BaseModel
-
-class QuestionRequest(BaseModel):
-    user_id: int
-    profile_id: int
-    chart_id: int
-    question: str
-
-
 @app.post("/ask_question")
 def ask_question(request: QuestionRequest):
 
@@ -347,3 +350,37 @@ def ask_question(request: QuestionRequest):
     return {
         "answer": answer
     }
+
+
+@app.post("/delete_kb")
+def delete_kb(request: DeleteKBRequest):
+
+    job_id = request.job_id
+
+    # 1. Get job
+    job = get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    file_id = job["file_id"]
+
+    try:
+        # 2. Delete embeddings (Pinecone)
+        from vector_db import delete_embeddings
+        delete_embeddings(file_id)
+
+        # 3. Delete file from S3
+        from storage import delete_file
+        delete_file(file_id)
+
+        # 4. Update DB
+        update_job(job_id, "deleted", int(time.time()))
+
+        return {
+            "status": "success",
+            "message": f"KB deleted for job_id: {job_id}"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

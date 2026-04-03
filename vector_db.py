@@ -71,3 +71,8 @@ def query_kb_embeddings(query_embedding, top_k=2):
         }
     )
     return results
+
+def delete_embeddings(file_id):
+    index.delete(
+        filter={"file_id": file_id}
+    )

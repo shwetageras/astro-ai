@@ -71,3 +71,12 @@ def save_kb_to_s3(kb_data, file_id):
     )
 
     print(f"KB uploaded to S3: kb/{file_id}.json")
+
+
+def delete_file(file_id):
+    s3 = boto3.client("s3")
+
+    s3.delete_object(
+        Bucket="your-bucket-name",
+        Key=file_id
+    )
