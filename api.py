@@ -298,8 +298,22 @@ def ask_question(request: QuestionRequest):
 
     kb_results = query_kb_embeddings(query_embedding)
 
+    # DEBUG LOGS
+
+    print("\n--- CHART CHUNKS ---")
+    for match in chart_results.matches:
+        print(match.metadata.get("text", "")[:200])
+
+    print("\n--- KB CHUNKS ---")
+    for match in kb_results.matches:
+        print(match.metadata.get("text", "")[:200])
+
     # 4. Build context
     context = build_context(chart_results, kb_results)
+
+    # 🔥 OPTIONAL (VERY USEFUL)
+    print("\n--- FINAL CONTEXT ---")
+    print(context[:1000])
 
     # 5. Generate answer
     answer = generate_answer(request.question, context)
