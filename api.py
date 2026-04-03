@@ -100,15 +100,17 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 def build_context(chart_results, kb_results):
     context = ""
 
-    if "matches" in chart_results:
-        for match in chart_results["matches"]:
-            context += match["metadata"]["text"] + "\n"
+    # Chart results
+    if chart_results.matches:
+        for match in chart_results.matches:
+            context += match.metadata["text"] + "\n"
 
-    if "matches" in kb_results:
-        for match in kb_results["matches"]:
-            context += match["metadata"]["text"] + "\n"
+    # KB results
+    if kb_results.matches:
+        for match in kb_results.matches:
+            context += match.metadata["text"] + "\n"
 
-    # Limit context size avoids LLM overload
+    # Limit context
     context = context[:3000]
 
     return context
