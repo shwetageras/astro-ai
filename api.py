@@ -43,7 +43,7 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
         
         chunks = chunk_text(text)
         embeddings = create_embeddings(chunks)
-        upsert_embeddings(file_id, chunks, embeddings)
+        upsert_embeddings(file_id, chunks, embeddings)    # Upsert = Update + Insert (record already exists → UPDATE it, else INSERT it)
         
         kb = build_kb(chunks, embeddings)
         save_kb(kb, file_id)
@@ -120,45 +120,143 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
+def is_similar(text1, text2, threshold=0.8):
+    # Simple similarity using overlap
+    words1 = set(text1.lower().split())
+    words2 = set(text2.lower().split())
+
+    overlap = len(words1 & words2) / max(len(words1), 1)
+
+    return overlap > threshold
+
+
 def build_context(chart_results, kb_results):
+
+    all_chunks = []
+
+    # -------- Step 1: Collect all --------
+    for match in chart_results.matches:
+        all_chunks.append({
+            "score": match.score,
+            "text": match.metadata.get("text", ""),
+            "source": "chart"
+        })
+
+    for match in kb_results.matches:
+        all_chunks.append({
+            "score": match.score,
+            "text": match.metadata.get("text", ""),
+            "source": "kb"
+        })
+
+    # -------- Step 2: Sort globally --------
+    all_chunks.sort(key=lambda x: x["score"], reverse=True)
+    all_chunks_backup = all_chunks.copy()
+
+    # -------- Step 3: Filter by threshold --------
+    SCORE_THRESHOLD = 0.70
+
+    filtered_chunks = [c for c in all_chunks if c["score"] >= SCORE_THRESHOLD]
+
+    # Fallback if nothing passes threshold
+    if not filtered_chunks:
+        filtered_chunks = all_chunks_backup[:5]   # take top 5 anyway
+
+    all_chunks = filtered_chunks
+
+    # -------- Step 4: De-duplicate --------
+    selected = []
+
+    for chunk in all_chunks:
+        if not any(is_similar(chunk["text"], s["text"]) for s in selected):
+            selected.append(chunk)
+
+        if len(selected) >= 6:   # total context size cap
+            break
+
+    # -------- Step 5: Separate again (for structure) --------
+    chart_data = [c for c in selected if c["source"] == "chart"]
+    kb_data = [c for c in selected if c["source"] == "kb"]
+
+    if not chart_data:
+        chart_data = [c for c in all_chunks if c["source"] == "chart"][:2]
+
+    # -------- Step 6: Build structured context --------
     context = ""
 
-    # Chart results
-    if chart_results.matches:
-        for match in chart_results.matches:
-            context += match.metadata["text"] + "\n"
+    if chart_data:
+        context += "CHART DATA:\n"
+        for c in chart_data:
+            context += f"- {c['text']}\n"
 
-    # KB results
-    if kb_results.matches:
-        for match in kb_results.matches:
-            context += match.metadata["text"] + "\n"
+    if kb_data:
+        context += "\nKNOWLEDGE BASE:\n"
+        for c in kb_data:
+            context += f"- {c['text']}\n"
 
-    # Limit context
-    context = context[:3000]
-
-    return context
+    return context[:3000]
 
 
 def generate_answer(question, context):
     prompt = f"""
 You are an expert astrologer.
 
-Use the context below to answer the question.
+You must answer ONLY using the provided context.
 
-Context:
+---------------------
+INSTRUCTIONS:
+---------------------
+
+1. SOURCE PRIORITY:
+   - CHART DATA = highest priority (personal, factual)
+   - KNOWLEDGE BASE = supporting interpretation
+
+2. STRICT USAGE:
+   - Use ONLY the information present in the context
+   - Do NOT use any external knowledge
+   - Do NOT assume anything not present in the context
+   - If the context is insufficient, clearly say: "Insufficient information in provided context"
+
+3. CONFLICT HANDLING:
+   - If chart data and KB suggest different conclusions:
+     → Clearly identify both signals
+     → Explain the conflict
+     → Resolve logically, prioritizing chart data
+
+4. REASONING PROCESS (MANDATORY):
+   - Step 1: Key observations from CHART DATA
+   - Step 2: Apply relevant KNOWLEDGE BASE rules
+   - Step 3: Resolve conflicts (if any)
+   - Step 4: Final answer
+
+5. TONE:
+   - Do NOT make absolute predictions
+   - Use cautious and advisory language
+
+---------------------
+CONTEXT:
+---------------------
 {context}
 
-Question:
+---------------------
+QUESTION:
+---------------------
 {question}
-"""
 
+---------------------
+ANSWER:
+---------------------
+"""
+    
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
-            {"role": "system", "content": "You are a helpful astrologer."},
+            {"role": "system", "content": "You are a careful and reasoning-based astrologer."},
             {"role": "user", "content": prompt}
         ]
     )
+
+    return response.choices[0].message.content
 
     return response.choices[0].message.content
 
@@ -318,27 +416,34 @@ def ask_question(request: QuestionRequest):
         query_embedding,
         request.user_id,
         request.profile_id,
-        request.chart_id
+        request.chart_id,
+        top_k=10   # 🔥 IMPORTANT
     )
 
-    kb_results = query_kb_embeddings(query_embedding)
+    kb_results = query_kb_embeddings(
+        query_embedding,
+        top_k=10   # 🔥 IMPORTANT
+    )
 
-    # DEBUG LOGS
+    # 🔥 DEBUGGING
+    print("\n================ RETRIEVAL DEBUG ================")
 
-    print("\n--- CHART CHUNKS ---")
+    print("\n--- CHART RESULTS (Raw) ---")
     for match in chart_results.matches:
-        print(match.metadata.get("text", "")[:200])
+        print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
-    print("\n--- KB CHUNKS ---")
+    print("\n--- KB RESULTS (Raw) ---")
     for match in kb_results.matches:
-        print(match.metadata.get("text", "")[:200])
+        print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     # 4. Build context
     context = build_context(chart_results, kb_results)
 
-    # 🔥 OPTIONAL (VERY USEFUL)
-    print("\n--- FINAL CONTEXT ---")
+    print("\n--- FINAL CONTEXT (After Filtering & Selection) ---")
     print(context[:1000])
+
+    # Count Summary
+    print(f"\nSelected Context Length: {len(context)} chars")
 
     # 5. Generate answer
     answer = generate_answer(request.question, context)

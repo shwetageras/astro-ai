@@ -2,7 +2,6 @@ import json
 import os
 from dotenv import load_dotenv
 import boto3
-
 load_dotenv()
 
 s3 = boto3.client(

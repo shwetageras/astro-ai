@@ -1,6 +1,7 @@
 from pypdf import PdfReader
 from openai import OpenAI
 import os
+import re
 import json
 from dotenv import load_dotenv
 from storage import save_kb_to_s3
@@ -26,15 +27,30 @@ def read_text_file(file_path):
 # -------------------------------
 # TEXT CHUNKING
 # -------------------------------
-def chunk_text(text, chunk_size=500, overlap=100):
+def chunk_text(text, max_chunk_size=500):
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+
     chunks = []
-    
-    step = chunk_size - overlap
-    
-    for i in range(0, len(text), step):
-        chunk = text[i:i + chunk_size]
-        chunks.append(chunk)
-    
+    current_chunk = ""
+
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+
+        # If adding this sentence stays within limit → add
+        if len(current_chunk) + len(sentence) <= max_chunk_size:
+            current_chunk += " " + sentence
+        else:
+            # Save current chunk
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence
+
+    # Add last chunk
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
     return chunks
 
 
@@ -49,17 +65,20 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # EMBEDDINGS
 # -------------------------------
 def create_embeddings(chunks):
-    embeddings = []
-    
-    for chunk in chunks:
+    BATCH_SIZE = 100
+    all_embeddings = []
+
+    for i in range(0, len(chunks), BATCH_SIZE):
+        batch = chunks[i:i+BATCH_SIZE]
+
         response = client.embeddings.create(
             model="text-embedding-3-small",
-            input=chunk
+            input=batch
         )
-        
-        embeddings.append(response.data[0].embedding)
-    
-    return embeddings
+
+        all_embeddings.extend([item.embedding for item in response.data])
+
+    return all_embeddings
 
 
 # -------------------------------

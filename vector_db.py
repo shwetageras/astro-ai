@@ -36,7 +36,11 @@ def upsert_embeddings(file_id, chunks, embeddings, metadata=None):
             }
         })
 
-    index.upsert(vectors=vectors)
+    BATCH_SIZE = 100   # safe starting point (later Dynamic Batching to be implemented)
+
+    for i in range(0, len(vectors), BATCH_SIZE):
+        batch = vectors[i:i + BATCH_SIZE]
+        index.upsert(vectors=batch)
 
 def query_embeddings(query_embedding, top_k=5):
     results = index.query(
