@@ -16,8 +16,13 @@ from db import insert_chart_job, update_chart_job
 from vector_db import query_chart_embeddings, query_kb_embeddings
 from db import insert_qna, update_qna_answer
 from fastapi import HTTPException
+from vector_db import delete_embeddings
+from prompts import build_prompt
 
 app = FastAPI()
+
+def make_safe_filename(name: str):
+    return name.replace(" ", "_").replace("/", "_")
 
 # BACKGROUND FUNCTION FOR upload_pdf
 def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
@@ -42,7 +47,11 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
             raise Exception(f"Unsupported file type: {file_ext}")
         
         chunks = chunk_text(text)
+        print(f"📊 Total chunks created: {len(chunks)}")
+
         embeddings = create_embeddings(chunks)
+        print(f"📊 Total embeddings generated: {len(embeddings)}")
+        
         upsert_embeddings(file_id, chunks, embeddings)    # Upsert = Update + Insert (record already exists → UPDATE it, else INSERT it)
         
         kb = build_kb(chunks, embeddings)
@@ -198,55 +207,8 @@ def build_context(chart_results, kb_results):
 
 
 def generate_answer(question, context):
-    prompt = f"""
-You are an expert astrologer.
 
-You must answer ONLY using the provided context.
-
----------------------
-INSTRUCTIONS:
----------------------
-
-1. SOURCE PRIORITY:
-   - CHART DATA = highest priority (personal, factual)
-   - KNOWLEDGE BASE = supporting interpretation
-
-2. STRICT USAGE:
-   - Use ONLY the information present in the context
-   - Do NOT use any external knowledge
-   - Do NOT assume anything not present in the context
-   - If the context is insufficient, clearly say: "Insufficient information in provided context"
-
-3. CONFLICT HANDLING:
-   - If chart data and KB suggest different conclusions:
-     → Clearly identify both signals
-     → Explain the conflict
-     → Resolve logically, prioritizing chart data
-
-4. REASONING PROCESS (MANDATORY):
-   - Step 1: Key observations from CHART DATA
-   - Step 2: Apply relevant KNOWLEDGE BASE rules
-   - Step 3: Resolve conflicts (if any)
-   - Step 4: Final answer
-
-5. TONE:
-   - Do NOT make absolute predictions
-   - Use cautious and advisory language
-
----------------------
-CONTEXT:
----------------------
-{context}
-
----------------------
-QUESTION:
----------------------
-{question}
-
----------------------
-ANSWER:
----------------------
-"""
+    prompt = build_prompt(question, context)
     
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
@@ -258,7 +220,29 @@ ANSWER:
 
     return response.choices[0].message.content
 
-    return response.choices[0].message.content
+
+def process_text(text, file_id, file_name, job_id, timestamp):
+    try:
+        chunks = chunk_text(text)
+        print(f"📊 Total chunks created: {len(chunks)}")
+
+        embeddings = create_embeddings(chunks)
+        print(f"📊 Total embeddings generated: {len(embeddings)}")
+
+        upsert_embeddings(file_id, chunks, embeddings)
+
+        kb = build_kb(chunks, embeddings)
+        save_kb(kb, file_id)
+
+        save_metadata(file_id, file_name, int(time.time()))
+
+        update_job(job_id, "completed", int(time.time()))
+
+        notify_embedding_status(file_id, job_id, timestamp, file_name)
+
+    except Exception as e:
+        print(f"Error processing text job {job_id}: {e}")
+        update_job(job_id, "failed", int(time.time()), str(e))
 
 from pydantic import BaseModel
 
@@ -277,39 +261,64 @@ class DeleteKBRequest(BaseModel):
     job_id: str
 
 
-# Create API → /upload_pdf
-@app.post("/upload_pdf")
-async def upload_pdf(
+# Create API → /upload_kb
+@app.post("/upload_kb")
+async def upload_kb(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    isKbtype: str = Form(...),
+    name: str = Form(...),
+    content: str = Form(None),
+    file: UploadFile = File(None),
 ):
     import time
 
     timestamp = int(time.time())
 
-    file_id = f"{timestamp}_{file.filename}"
+    safe_name = make_safe_filename(name)
+    file_id = f"{timestamp}_{safe_name}"
     job_id = f"job_{timestamp}"
 
-    # Read file
-    file_bytes = await file.read()
-
-    # Upload to S3
-    save_file(file_bytes, file_id)
-
     # Store job info
-    insert_job(job_id, file_id, file.filename, "processing", timestamp)
+    insert_job(job_id, file_id, name, "processing", timestamp)
 
-    # Run processing in background
-    background_tasks.add_task(
-        process_pdf,
-        file_bytes,
-        file_id,
-        file.filename,
-        job_id,
-        timestamp
-    )
+    # 🔥 CASE 1: TEXT INPUT
+    if isKbtype == "article":
 
-    # Response
+        if not content:
+            raise HTTPException(status_code=400, detail="Content is required for article type")
+
+        background_tasks.add_task(
+            process_text,
+            content,
+            file_id,
+            name,
+            job_id,
+            timestamp
+        )
+
+    # 🔥 CASE 2: FILE INPUT
+    elif isKbtype == "file":
+
+        if not file:
+            raise HTTPException(status_code=400, detail="File is required for file type")
+
+        file_bytes = await file.read()
+
+        # Upload to S3
+        save_file(file_bytes, file_id)
+
+        background_tasks.add_task(
+            process_pdf,
+            file_bytes,
+            file_id,
+            name,
+            job_id,
+            timestamp
+        )
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid isKbtype")
+
     return {
         "job_id": job_id,
         "status": "processing"
@@ -363,7 +372,8 @@ async def upload_chart(
 
     timestamp = int(time.time())
 
-    file_id = f"{timestamp}_{file.filename}"
+    safe_name = make_safe_filename(file.filename)
+    file_id = f"{timestamp}_{safe_name}"
     job_id = f"chart_{timestamp}"
 
     file_bytes = await file.read()
@@ -472,8 +482,9 @@ def delete_kb(request: DeleteKBRequest):
 
     try:
         # 2. Delete embeddings (Pinecone)
-        from vector_db import delete_embeddings
+        print(f"🧹 Deleting embeddings for file_id: {file_id}")
         delete_embeddings(file_id)
+        print(f"✅ Embeddings deleted for file_id: {file_id}")
 
         # 3. Delete file from S3
         from storage import delete_file
