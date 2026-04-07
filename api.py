@@ -481,6 +481,12 @@ def delete_kb(request: DeleteKBRequest):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    if job["status"] == "processing":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete while processing is in progress"
+        )
+
     file_id = job["file_id"]
 
     try:
