@@ -493,13 +493,13 @@ def delete_kb(request: DeleteKBRequest):
         from storage import delete_file
         delete_file(file_id)
 
-        # 4. Update DB
-        update_job(job_id, "deleted", int(time.time()))
-
-        return {
-            "status": "success",
-            "message": f"KB deleted for job_id: {job_id}"
-        }
-
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"⚠️ Delete error (continuing): {e}")
+
+    # 🔥 ALWAYS update DB (no matter what)
+    update_job(job_id, "deleted", int(time.time()))
+
+    return {
+        "status": "success",
+        "message": f"KB deleted for job_id: {job_id}"
+    }

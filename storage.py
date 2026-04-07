@@ -73,9 +73,19 @@ def save_kb_to_s3(kb_data, file_id):
 
 
 def delete_file(file_id):
-    s3 = boto3.client("s3")
+    try:
+        s3.delete_object(
+            Bucket=BUCKET_NAME,
+            Key=file_id
+        )
+    except Exception as e:
+        print(f"⚠️ S3 file already missing: {file_id}")
 
-    s3.delete_object(
-        Bucket="xtrology-genai-data",
-        Key=file_id
-    )
+    # Always try deleting KB JSON
+    try:
+        s3.delete_object(
+            Bucket=BUCKET_NAME,
+            Key=f"kb/{file_id}.json"
+        )
+    except Exception:
+        pass
