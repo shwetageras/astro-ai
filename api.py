@@ -34,7 +34,10 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
             f.write(file_bytes)
 
         # Run pipeline
-        file_ext = file_name.split(".")[-1].lower()
+        if "." in file_name:
+            file_ext = file_name.split(".")[-1].lower()
+        else:
+            raise Exception("File has no extension")
 
         if file_ext == "pdf":
             text = read_pdf(temp_file_path)
@@ -311,7 +314,7 @@ async def upload_kb(
             process_pdf,
             file_bytes,
             file_id,
-            name,
+            file.filename,   # USE REAL FILE NAME
             job_id,
             timestamp
         )
