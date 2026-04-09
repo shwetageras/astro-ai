@@ -171,3 +171,48 @@ def update_qna_answer(qna_id, answer):
     conn.commit()
     cursor.close()
     conn.close()
+
+
+def get_chart_details_bulk(job_ids):
+    from psycopg2.extras import RealDictCursor
+    import psycopg2
+
+    conn = psycopg2.connect(
+        dbname="astro_ai_db",
+        user="postgres",
+        password="your_password",
+        host="localhost",
+        port="5432"
+    )
+
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    query = """
+        SELECT job_id, chart_id, user_id, profile_id
+        FROM charts_jobs
+        WHERE job_id = ANY(%s)
+        AND is_deleted = FALSE
+    """
+
+    cursor.execute(query, (job_ids,))
+    results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return results
+
+
+def soft_delete_chart_job(job_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE charts_jobs
+        SET is_deleted = TRUE
+        WHERE job_id = %s
+    """, (job_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()

@@ -80,3 +80,14 @@ def delete_embeddings(file_id):
     index.delete(
         filter={"file_id": file_id}
     )
+
+def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=5):
+    results = index.query(
+        vector=query_embedding,
+        top_k=top_k,
+        include_metadata=True,
+        filter={
+            "file_id": {"$in": kb_ids}
+        }
+    )
+    return results

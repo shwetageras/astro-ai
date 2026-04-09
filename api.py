@@ -5,7 +5,7 @@ from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
 from notifier import notify_embedding_status
-
+from db import get_chart_details_bulk, soft_delete_chart_job, get_chart_job
 from db import insert_job, get_job, update_job
 from vector_db import upsert_embeddings
 from vector_db import query_embeddings
@@ -18,6 +18,8 @@ from db import insert_qna, update_qna_answer
 from fastapi import HTTPException
 from vector_db import delete_embeddings
 from prompts import build_prompt
+from typing import List
+from vector_db import query_kb_embeddings_filtered
 
 app = FastAPI()
 
@@ -254,15 +256,17 @@ class QueryRequest(BaseModel):
 
 
 class QuestionRequest(BaseModel):
-    user_id: int
-    profile_id: int
-    chart_id: int
+    chart_ids: List[str]
+    kb_id: List[str]
     question: str
 
 
 class DeleteKBRequest(BaseModel):   
     job_id: str
 
+
+class DeleteChartRequest(BaseModel):
+    job_id: str
 
 # Create API → /upload_kb
 @app.post("/upload_kb")
@@ -409,62 +413,81 @@ async def upload_chart(
 @app.post("/ask_question")
 def ask_question(request: QuestionRequest):
 
-    # 1. Store question
+    # 1. Resolve chart job_ids → chart details from DB
+    chart_details = get_chart_details_bulk(request.chart_ids)
+
+    if not chart_details:
+        return {"error": "Invalid job_ids"}
+
+    # 2. Pick primary chart for storing QnA
+    primary_chart = chart_details[0]
+
+    # 3. Store question (using DB-derived values)
     qna_id = insert_qna(
-        request.user_id,
-        request.profile_id,
-        request.chart_id,
+        primary_chart["user_id"],
+        primary_chart["profile_id"],
+        primary_chart["chart_id"],
         request.question
     )
 
-    # 2. Embed question
+    # 4. Embed question
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=request.question
     )
     query_embedding = response.data[0].embedding
 
-    # 3. Retrieve context
-    chart_results = query_chart_embeddings(
-        query_embedding,
-        request.user_id,
-        request.profile_id,
-        request.chart_id,
-        top_k=10   # 🔥 IMPORTANT
-    )
+    # 5. Retrieve from MULTIPLE charts
+    all_chart_matches = []
 
-    kb_results = query_kb_embeddings(
-        query_embedding,
-        top_k=10   # 🔥 IMPORTANT
-    )
+    for chart in chart_details:
+        results = query_chart_embeddings(
+            query_embedding,
+            chart["user_id"],
+            chart["profile_id"],
+            chart["chart_id"],
+            top_k=5
+        )
+        all_chart_matches.extend(results.matches)
 
-    # 🔥 DEBUGGING
+    # KB retrieval logic
+    if "kbn" in request.kb_id:
+        # Global KB
+        kb_results = query_kb_embeddings(
+            query_embedding,
+            top_k=10
+        )
+    else:
+        # Filtered KB
+        kb_results = query_kb_embeddings_filtered(
+            query_embedding,
+            request.kb_id,
+            top_k=10
+        )
+
+    # DEBUG
     print("\n================ RETRIEVAL DEBUG ================")
 
-    print("\n--- CHART RESULTS (Raw) ---")
-    for match in chart_results.matches:
+    print("\n--- CHART RESULTS (Merged) ---")
+    for match in all_chart_matches:
         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
-    print("\n--- KB RESULTS (Raw) ---")
+    print("\n--- KB RESULTS ---")
     for match in kb_results.matches:
         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
-    # 4. Build context
-    context = build_context(chart_results, kb_results)
+    # 7. Build context (use merged results)
+    context = build_context(all_chart_matches, kb_results)
 
-    print("\n--- FINAL CONTEXT (After Filtering & Selection) ---")
+    print("\n--- FINAL CONTEXT ---")
     print(context[:1000])
 
-    # Count Summary
-    print(f"\nSelected Context Length: {len(context)} chars")
-
-    # 5. Generate answer
+    # 8. Generate answer
     answer = generate_answer(request.question, context)
 
-    # 6. Store answer
+    # 9. Store answer
     update_qna_answer(qna_id, answer)
 
-    # 7. Return answer
     return {
         "answer": answer
     }
@@ -508,4 +531,41 @@ def delete_kb(request: DeleteKBRequest):
     return {
         "status": "success",
         "message": f"KB deleted for job_id: {job_id}"
+    }
+
+
+@app.post("/delete_chart")
+def delete_chart(request: DeleteChartRequest):
+
+    job_id = request.job_id
+
+    # 1. Get chart job
+    chart_job = get_chart_job(job_id)
+
+    if not chart_job:
+        raise HTTPException(status_code=404, detail="Chart not found")
+
+    if chart_job["status"] == "processing":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete while processing"
+        )
+
+    try:
+        # 2. Delete embeddings
+        delete_embeddings(job_id)
+
+        # 3. Delete file from S3
+        from storage import delete_file
+        delete_file(job_id)
+
+    except Exception as e:
+        print(f"⚠️ Delete error: {e}")
+
+    # 🔥 4. SOFT DELETE (THIS WAS MISSING)
+    soft_delete_chart_job(job_id)
+
+    return {
+        "status": "success",
+        "message": f"Chart deleted for job_id: {job_id}"
     }
