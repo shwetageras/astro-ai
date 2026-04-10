@@ -5,7 +5,7 @@ def get_connection():
         host="localhost",
         database="astro_ai_db",
         user="postgres",
-        password="postgres123"  # replace if different
+        password="postgres321"  # replace if different
     )
     return conn
 
@@ -180,7 +180,7 @@ def get_chart_details_bulk(job_ids):
     conn = psycopg2.connect(
         dbname="astro_ai_db",
         user="postgres",
-        password="your_password",
+        password="postgres321",
         host="localhost",
         port="5432"
     )
