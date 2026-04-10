@@ -160,12 +160,13 @@ def build_context(chart_results, kb_results):
             "source": "chart"
         })
 
-    for match in kb_results.matches:
-        all_chunks.append({
-            "score": match.score,
-            "text": match.metadata.get("text", ""),
-            "source": "kb"
-        })
+    if kb_results:
+        for match in kb_results.matches:
+            all_chunks.append({
+                "score": match.score,
+                "text": match.metadata.get("text", ""),
+                "source": "kb"
+            })
 
     # -------- Step 2: Sort globally --------
     all_chunks.sort(key=lambda x: x["score"], reverse=True)
@@ -426,59 +427,72 @@ async def upload_chart(
 @app.post("/ask_question")
 def ask_question(request: QuestionRequest):
 
-    # 1. Resolve chart job_ids → chart details from DB
-    chart_details = get_chart_details_bulk(request.chart_ids)
+    chart_ids = request.chart_ids
+    kb_ids = request.kb_id
 
-    if not chart_details:
-        return {"error": "Invalid job_ids"}
+    use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
+    use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
 
-    # 2. Pick primary chart for storing QnA
-    primary_chart = chart_details[0]
+    # -------------------------------
+    # STEP 1: INIT
+    # -------------------------------
+    qna_id = None
+    chart_details = []
+    all_chart_matches = []
 
-    # 3. Store question (using DB-derived values)
-    qna_id = insert_qna(
-        primary_chart["user_id"],
-        primary_chart["profile_id"],
-        primary_chart["chart_id"],
-        request.question
-    )
+    # -------------------------------
+    # STEP 2: FETCH CHART + STORE QNA
+    # -------------------------------
+    if use_chart:
+        chart_details = get_chart_details_bulk(chart_ids)
 
-    # 4. Embed question
+        if chart_details:
+            primary_chart = chart_details[0]
+
+            qna_id = insert_qna(
+                primary_chart["user_id"],
+                primary_chart["profile_id"],
+                primary_chart["chart_id"],
+                request.question
+            )
+
+    # -------------------------------
+    # STEP 3: EMBEDDING
+    # -------------------------------
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=request.question
     )
     query_embedding = response.data[0].embedding
 
-    # 5. Retrieve from MULTIPLE charts
-    all_chart_matches = []
+    # -------------------------------
+    # STEP 4: CHART RETRIEVAL
+    # -------------------------------
+    if use_chart and chart_details:
+        for chart in chart_details:
+            results = query_chart_embeddings(
+                query_embedding,
+                chart["user_id"],
+                chart["profile_id"],
+                chart["chart_id"],
+                top_k=5
+            )
+            all_chart_matches.extend(results.matches)
 
-    for chart in chart_details:
-        results = query_chart_embeddings(
-            query_embedding,
-            chart["user_id"],
-            chart["profile_id"],
-            chart["chart_id"],
-            top_k=5
-        )
-        all_chart_matches.extend(results.matches)
+    # -------------------------------
+    # STEP 5: KB RETRIEVAL
+    # -------------------------------
+    kb_results = None
 
-    # KB retrieval logic
-    if "kbn" in request.kb_id:
-        # Global KB
-        kb_results = query_kb_embeddings(
-            query_embedding,
-            top_k=10
-        )
-    else:
-        # Filtered KB
-        kb_results = query_kb_embeddings_filtered(
-            query_embedding,
-            request.kb_id,
-            top_k=10
-        )
+    if use_kb:
+        if "kbn" in kb_ids:
+            kb_results = query_kb_embeddings(query_embedding, top_k=10)
+        else:
+            kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
 
-    # DEBUG
+    # -------------------------------
+    # STEP 6: DEBUG
+    # -------------------------------
     print("\n================ RETRIEVAL DEBUG ================")
 
     print("\n--- CHART RESULTS (Merged) ---")
@@ -486,21 +500,35 @@ def ask_question(request: QuestionRequest):
         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     print("\n--- KB RESULTS ---")
-    for match in kb_results.matches:
-        print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+    if kb_results:
+        for match in kb_results.matches:
+            print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
-    # 7. Build context (use merged results)
-    context = build_context(all_chart_matches, kb_results)
+    # -------------------------------
+    # STEP 7: CONTEXT BUILDING
+    # -------------------------------
+    if not use_chart and not use_kb:
+        context = ""   # 🔥 PURE LLM MODE
+    else:
+        context = build_context(all_chart_matches, kb_results)
 
     print("\n--- FINAL CONTEXT ---")
     print(context[:1000])
 
-    # 8. Generate answer
+    # -------------------------------
+    # STEP 8: GENERATE ANSWER
+    # -------------------------------
     answer = generate_answer(request.question, context)
 
-    # 9. Store answer
-    update_qna_answer(qna_id, answer)
+    # -------------------------------
+    # STEP 9: STORE ANSWER
+    # -------------------------------
+    if qna_id:
+        update_qna_answer(qna_id, answer)
 
+    # -------------------------------
+    # STEP 10: RESPONSE
+    # -------------------------------
     return {
         "answer": answer
     }
@@ -592,11 +620,13 @@ def create_gpt_chart(request: GPTChartRequest):
     print("\n===== GPT CHART REQUEST =====")
     print(request)
 
+    job_id = f"chart_{int(time.time())}"
+
     return {
         "status": "success",
-        "message": "This is GPT generated chart",
+        "message": "Chart generated successfully",
         "data": {
-            "name": request.name,
-            "job_id": f"chart_{int(time.time())}"
+            "chart_file_id": job_id,
+            "chart_file": "This is GPT generated chart"
         }
     }
