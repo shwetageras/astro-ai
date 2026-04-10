@@ -272,6 +272,15 @@ class DeleteKBRequest(BaseModel):
 class DeleteChartRequest(BaseModel):
     job_id: str
 
+
+class GPTChartRequest(BaseModel):
+    name: str
+    dob: str   # keep string for flexibility (YYYY-MM-DD expected)
+    tob: str   # time of birth (HH:MM or HH:MM:SS)
+    pob: str   # place of birth
+    gender: str
+
+
 # Create API → /upload_kb
 @app.post("/upload_kb")
 async def upload_kb(
@@ -572,4 +581,21 @@ def delete_chart(request: DeleteChartRequest):
     return {
         "status": "success",
         "message": f"Chart deleted for job_id: {job_id}"
+    }
+
+
+@app.post("/create_gpt_chart")
+def create_gpt_chart(request: GPTChartRequest):
+
+    print("\n===== GPT CHART REQUEST =====")
+    print(request)
+
+    # Dummy response (as requested)
+    return {
+        "status": "success",
+        "message": "This is GPT generated chart",
+        "data": {
+            "name": request.name,
+            "chart_id": f"gpt_{int(time.time())}"   # fake chart id
+        }
     }
