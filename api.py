@@ -148,8 +148,12 @@ def build_context(chart_results, kb_results):
 
     all_chunks = []
 
+    
+    # Handle both cases: list or Pinecone object
+    chart_matches = chart_results.matches if hasattr(chart_results, "matches") else chart_results
+
     # -------- Step 1: Collect all --------
-    for match in chart_results.matches:
+    for match in chart_matches:
         all_chunks.append({
             "score": match.score,
             "text": match.metadata.get("text", ""),
