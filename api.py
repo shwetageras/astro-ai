@@ -587,15 +587,16 @@ def delete_chart(request: DeleteChartRequest):
 @app.post("/create_gpt_chart")
 def create_gpt_chart(request: GPTChartRequest):
 
+    import time
+
     print("\n===== GPT CHART REQUEST =====")
     print(request)
 
-    # Dummy response (as requested)
     return {
         "status": "success",
         "message": "This is GPT generated chart",
         "data": {
             "name": request.name,
-            "chart_id": f"gpt_{int(time.time())}"   # fake chart id
+            "chart_id": f"chart_{int(time.time())}"
         }
     }
