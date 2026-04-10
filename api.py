@@ -597,6 +597,6 @@ def create_gpt_chart(request: GPTChartRequest):
         "message": "This is GPT generated chart",
         "data": {
             "name": request.name,
-            "chart_id": f"chart_{int(time.time())}"
+            "job_id": f"chart_{int(time.time())}"
         }
     }
