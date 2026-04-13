@@ -254,6 +254,38 @@ def process_text(text, file_id, file_name, job_id, timestamp):
         print(f"Error processing text job {job_id}: {e}")
         update_job(job_id, "failed", int(time.time()), str(e))
 
+
+def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
+
+    try:
+        from kb_builder import chunk_text, create_embeddings
+        from vector_db import upsert_embeddings
+
+        # Step 1: Chunk
+        chunks = chunk_text(content)
+
+        # Step 2: Embeddings
+        embeddings = create_embeddings(chunks)
+
+        # Step 3: Store in Pinecone
+        upsert_embeddings(
+            file_id,
+            chunks,
+            embeddings,
+            metadata={
+                "user_id": user_id,
+                "profile_id": profile_id,
+                "chart_id": chart_id
+            }
+        )
+
+        # Step 4: Update DB
+        update_chart_job(job_id, "completed", int(time.time()))
+
+    except Exception as e:
+        update_chart_job(job_id, "failed", int(time.time()), str(e))
+
+
 from pydantic import BaseModel
 
 class QueryRequest(BaseModel):
@@ -385,38 +417,75 @@ def query_docs(request: QueryRequest):
 @app.post("/upload_chart")
 async def upload_chart(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    isCharttype: str = Form(...),
     user_id: int = Form(...),
     profile_id: int = Form(...),
-    chart_id: int = Form(...)
+    chart_id: int = Form(...),
+    content: str = Form(None),
+    file: UploadFile = File(None)
 ):
+
+    import time
 
     timestamp = int(time.time())
 
-    safe_name = make_safe_filename(file.filename)
+    safe_name = make_safe_filename("chart")
     file_id = f"{timestamp}_{safe_name}"
     job_id = f"chart_{timestamp}"
 
-    file_bytes = await file.read()
-
-    # Save file to S3
-    save_file(file_bytes, file_id)
-
-    # Insert into DB (create new function)
-    insert_chart_job(job_id, chart_id, user_id, profile_id, file.filename, "processing", timestamp)
-
-    # Background processing
-    background_tasks.add_task(
-        process_chart,
-        file_bytes,
-        file_id,
-        file.filename,
+    # Insert into DB
+    insert_chart_job(
         job_id,
         chart_id,
         user_id,
         profile_id,
+        "chart_input",
+        "processing",
         timestamp
     )
+
+    # 🔥 CASE 1: TEXT INPUT
+    if isCharttype == "text":
+
+        if not content:
+            raise HTTPException(status_code=400, detail="Content required for text chart")
+
+        background_tasks.add_task(
+            process_chart_text,
+            content,
+            file_id,
+            job_id,
+            chart_id,
+            user_id,
+            profile_id,
+            timestamp
+        )
+
+    # 🔥 CASE 2: FILE INPUT
+    elif isCharttype == "file":
+
+        if not file:
+            raise HTTPException(status_code=400, detail="File required for chart upload")
+
+        file_bytes = await file.read()
+
+        # Save to S3
+        save_file(file_bytes, file_id)
+
+        background_tasks.add_task(
+            process_chart,
+            file_bytes,
+            file_id,
+            file.filename,
+            job_id,
+            chart_id,
+            user_id,
+            profile_id,
+            timestamp
+        )
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid isCharttype")
 
     return {
         "job_id": job_id,
