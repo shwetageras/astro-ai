@@ -258,14 +258,18 @@ def process_text(text, file_id, file_name, job_id, timestamp):
 def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
 
     try:
+        print("PROCESS START:", job_id)
+
         from kb_builder import chunk_text, create_embeddings
         from vector_db import upsert_embeddings
 
         # Step 1: Chunk
         chunks = chunk_text(content)
+        print("CHUNKING DONE:", len(chunks), "chunks")
 
         # Step 2: Embeddings
         embeddings = create_embeddings(chunks)
+        print("EMBEDDINGS DONE:", job_id)
 
         # Step 3: Store in Pinecone
         upsert_embeddings(
@@ -278,11 +282,15 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
                 "chart_id": chart_id
             }
         )
+        print("UPSERT DONE:", job_id)
 
         # Step 4: Update DB
+        print("UPDATING DB:", job_id)
         update_chart_job(job_id, "completed", int(time.time()))
+        print("UPDATED SUCCESS:", job_id)
 
     except Exception as e:
+        print("❌ ERROR in process_chart_text:", str(e))   # 🔥 VERY IMPORTANT
         update_chart_job(job_id, "failed", int(time.time()), str(e))
 
 
@@ -431,7 +439,7 @@ async def upload_chart(
 
     safe_name = make_safe_filename("chart")
     file_id = f"{timestamp}_{safe_name}"
-    job_id = f"chart_{timestamp}"
+    job_id = f"job_{timestamp}"
 
     # Insert into DB
     insert_chart_job(
