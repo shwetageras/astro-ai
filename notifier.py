@@ -42,7 +42,7 @@ def notify_chart_status(job_id, chart_id, file_id):
 
     payload = {
         "job_id": job_id,
-        "chart_id": chart_id,
+        "chart_id": f"chart_{job_id.split('_')[1]}",  # 🔥 convert
         "status": "completed",
         "timestamp": int(time.time()),
         "file_id": file_id
