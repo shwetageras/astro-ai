@@ -36,7 +36,7 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
         print(f"[ERROR] KB callback failed: {str(e)}")
 
 
-def notify_chart_status(job_id, chart_id, file_id):
+def notify_chart_status(job_id, file_id):
 
     url = "https://api.xtrology.ai/app/charts/charts_status.php"
 

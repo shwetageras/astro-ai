@@ -255,7 +255,7 @@ def process_text(text, file_id, file_name, job_id, timestamp):
         update_job(job_id, "failed", int(time.time()), str(e))
 
 
-def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
+def process_chart_text(content, file_id, job_id, user_id, profile_id, timestamp):
 
     try:
         print("PROCESS START:", job_id)
@@ -278,8 +278,7 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
             embeddings,
             metadata={
                 "user_id": user_id,
-                "profile_id": profile_id,
-                "chart_id": chart_id
+                "profile_id": profile_id
             }
         )
         print("UPSERT DONE:", job_id)
@@ -339,9 +338,6 @@ async def upload_kb(
     file_id = f"{timestamp}_{safe_name}"
     job_id = f"job_{timestamp}"
 
-    # Store job info
-    insert_job(job_id, file_id, name, "processing", timestamp)
-
     # 🔥 CASE 1: TEXT INPUT
     if isKbtype == "article":
 
@@ -363,6 +359,9 @@ async def upload_kb(
         if not file:
             raise HTTPException(status_code=400, detail="File is required for file type")
 
+        # Store job info
+        insert_job(job_id, file_id, name, "processing", timestamp)
+        
         file_bytes = await file.read()
 
         # Upload to S3
@@ -426,6 +425,7 @@ def query_docs(request: QueryRequest):
 async def upload_chart(
     background_tasks: BackgroundTasks,
     isCharttype: str = Form(...),
+    name: str = Form(...),
     user_id: int = Form(...),
     profile_id: int = Form(...),
     chart_id: int = Form(...),
@@ -441,33 +441,11 @@ async def upload_chart(
     file_id = f"{timestamp}_{safe_name}"
     job_id = f"job_{timestamp}"
 
-    # Insert into DB
-    insert_chart_job(
-        job_id,
-        chart_id,
-        user_id,
-        profile_id,
-        "chart_input",
-        "processing",
-        timestamp
-    )
-
     # 🔥 CASE 1: TEXT INPUT
     if isCharttype == "article":
 
         if not content:
             raise HTTPException(status_code=400, detail="Content required for text chart")
-
-        background_tasks.add_task(
-            process_chart_text,
-            content,
-            file_id,
-            job_id,
-            chart_id,
-            user_id,
-            profile_id,
-            timestamp
-        )
 
     # 🔥 CASE 2: FILE INPUT
     elif isCharttype == "file":
@@ -475,6 +453,9 @@ async def upload_chart(
         if not file:
             raise HTTPException(status_code=400, detail="File required for chart upload")
 
+        # Store job info
+        insert_job(job_id, file_id, name, "processing", timestamp)
+        
         file_bytes = await file.read()
 
         # Save to S3
