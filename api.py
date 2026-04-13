@@ -447,6 +447,17 @@ async def upload_chart(
         if not content:
             raise HTTPException(status_code=400, detail="Content required for text chart")
 
+        # Start background processing
+        background_tasks.add_task(
+            process_chart_text,
+            content,
+            file_id,
+            job_id,
+            user_id,
+            profile_id,
+            timestamp
+        )
+
     # 🔥 CASE 2: FILE INPUT
     elif isCharttype == "file":
 
