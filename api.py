@@ -445,7 +445,7 @@ async def upload_chart(
     )
 
     # 🔥 CASE 1: TEXT INPUT
-    if isCharttype == "text":
+    if isCharttype == "article":
 
         if not content:
             raise HTTPException(status_code=400, detail="Content required for text chart")
