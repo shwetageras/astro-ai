@@ -723,13 +723,24 @@ async def create_chart_gpt(
             temperature=0.7
         )
 
-        chart_by_gpt = response.choices[0].message.content
+        try:
+            content = response.choices[0].message.content
+
+            if not content or content.strip() == "":
+                chart_by_gpt = "⚠️ Empty response from GPT. Please try again."
+            else:
+                chart_by_gpt = content.strip()
+
+        except Exception as e:
+            chart_by_gpt = f"❌ Error extracting response: {str(e)}"
 
     except Exception as e:
-        chart_by_gpt = f"Error generating chart: {str(e)}"
+        chart_by_gpt = f"❌ Error generating chart: {str(e)}"
 
     return {
         "job_id": job_id,
-        "status": "completed",   # IMPORTANT CHANGE
-        "chart_content": chart_by_gpt
+        "status": "completed",
+        "chart_content": chart_by_gpt,
+        "chart_size_chars": len(chart_by_gpt),
+        "chart_size_words": len(chart_by_gpt.split())
     }
