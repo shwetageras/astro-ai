@@ -2,7 +2,7 @@ import time
 import os
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from openai import OpenAI
-import google.generativeai as genai
+from google import genai
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
 from notifier import notify_embedding_status
@@ -761,6 +761,8 @@ async def create_chart_gpt(
 
 
 
+from google import genai   # 🔥 ADD THIS AT TOP OF FILE
+
 @app.post("/create_chart_gemini")
 async def create_chart_gemini(
     user_id: int = Form(...),
@@ -773,8 +775,6 @@ async def create_chart_gemini(
     country: str = Form(...)
 ):
 
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
     timestamp = int(time.time())
     job_id = f"job_{timestamp}"
 
@@ -784,19 +784,20 @@ async def create_chart_gemini(
     )
 
     try:
-        model = genai.GenerativeModel("models/gemini-1.0-pro")
-        response = model.generate_content(prompt)
+        # NEW SDK STARTS HERE
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-        try:
-            content = response.text
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
 
-            if not content or content.strip() == "":
-                chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
-            else:
-                chart_by_gemini = content.strip()
+        content = response.text
 
-        except Exception as e:
-            chart_by_gemini = f"❌ Error extracting Gemini response: {str(e)}"
+        if not content or content.strip() == "":
+            chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
+        else:
+            chart_by_gemini = content.strip()
 
     except Exception as e:
         chart_by_gemini = f"❌ Error generating chart: {str(e)}"
@@ -809,6 +810,6 @@ async def create_chart_gemini(
         "chart_size_words": len(chart_by_gemini.split()),
         "source": {
             "provider": "google",
-            "model": "gemini-1.0-pro"
+            "model": "gemini-1.5-flash"
         }
     }
