@@ -812,14 +812,14 @@ async def create_chart_gemini(
     # except Exception as e:
     #     chart_by_gemini = f"❌ Error generating chart: {str(e)}"
 
-    # return {
-    #     "job_id": job_id,
-    #     "status": "completed",
-    #     "chart_content": chart_by_gemini,
-    #     "chart_size_chars": len(chart_by_gemini),
-    #     "chart_size_words": len(chart_by_gemini.split()),
-    #     "source": {
-    #         "provider": "google",
-    #         "model": "gemini-1.5-flash"
-    #     }
-    # }
+    return {
+        "job_id": job_id,
+        "status": "completed",
+        "chart_content": chart_by_gemini,
+        "chart_size_chars": len(chart_by_gemini),
+        "chart_size_words": len(chart_by_gemini.split()),
+        "source": {
+            "provider": "google",
+            "model": "gemini-1.5-flash"
+        }
+    }
