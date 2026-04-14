@@ -760,9 +760,6 @@ async def create_chart_gpt(
     }
 
 
-
-from google import genai   # 🔥 ADD THIS AT TOP OF FILE
-
 @app.post("/create_chart_gemini")
 async def create_chart_gemini(
     user_id: int = Form(...),
