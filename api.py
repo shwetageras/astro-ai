@@ -1,5 +1,6 @@
 import time
 import os
+import json
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from openai import OpenAI
 from google import genai
@@ -714,38 +715,72 @@ async def create_chart_gpt(
     timestamp = int(time.time())
     job_id = f"job_{timestamp}"
 
-    prompt = (
-        f"Create a natal chart for {name} born on {dob} at {tob} in {pob}, {country}. "
-        "Provide at least 4 chart aspects and interpretations."
-    )
+    prompt = f"""
+    Generate a natal chart interpretation.
+
+    Return ONLY valid JSON in this format:
+
+    {{
+    "planets": {{
+        "sun": "...",
+        "moon": "...",
+        "ascendant": "...",
+        "mercury": "...",
+        "venus": "...",
+        "mars": "...",
+        "jupiter": "...",
+        "saturn": "..."
+    }},
+    "aspects": [
+        "...",
+        "...",
+        "...",
+        "..."
+    ],
+    "summary": "..."
+    }}
+
+    Rules:
+    - No explanation
+    - No markdown
+    - No extra text
+    - Keep it concise
+
+    Input:
+    Name: {name}
+    DOB: {dob}
+    TOB: {tob}
+    POB: {pob}, {country}
+    """
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
+            temperature=0.3,
+            response_format={"type": "json_object"}
         )
 
         try:
             content = response.choices[0].message.content
-
-            if not content or content.strip() == "":
-                chart_by_gpt = "⚠️ Empty response from GPT. Please try again."
-            else:
-                chart_by_gpt = content.strip()
+            chart_by_gpt = json.loads(content)
 
         except Exception as e:
-            chart_by_gpt = f"❌ Error extracting response: {str(e)}"
+            chart_by_gpt = {
+                "error": f"Parsing failed: {str(e)}"
+            }
 
     except Exception as e:
-        chart_by_gpt = f"❌ Error generating chart: {str(e)}"
+        chart_by_gpt = {
+            "error": f"Generation failed: {str(e)}"
+        }
 
     return {
         "job_id": job_id,
         "status": "completed",
         "chart_content": chart_by_gpt,
-        "chart_size_chars": len(chart_by_gpt),
-        "chart_size_words": len(chart_by_gpt.split()),  
+        "chart_size_chars": len(str(chart_by_gpt)),   # ✅ fixed
+        "chart_size_words": len(str(chart_by_gpt).split()),  # ✅ fixed
         "source": {
             "provider": "openai",
             "model": "gpt-4o-mini"
