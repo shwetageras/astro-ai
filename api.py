@@ -2,6 +2,7 @@ import time
 import os
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from openai import OpenAI
+import google.generativeai as genai
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
 from notifier import notify_embedding_status
@@ -20,6 +21,9 @@ from vector_db import delete_embeddings
 from prompts import build_prompt
 from typing import List
 from vector_db import query_kb_embeddings_filtered
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -750,5 +754,62 @@ async def create_chart_gpt(
         "chart_content": "Dummy chart generated successfully.",
         "chart_size_chars": 33,
         "chart_size_words": 4,
-        "source": "gpt-4o-mini"
+        "source": {
+            "provider": "openai",
+            "model": "gpt-4o-mini"
+        }
+    }
+
+
+
+@app.post("/create_chart_gemini")
+async def create_chart_gemini(
+    user_id: int = Form(...),
+    profile_id: int = Form(...),
+    chart_id: int = Form(...),
+    name: str = Form(...),
+    dob: str = Form(...),
+    tob: str = Form(...),
+    pob: str = Form(...),
+    country: str = Form(...)
+):
+
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+    timestamp = int(time.time())
+    job_id = f"job_{timestamp}"
+
+    prompt = (
+        f"Create a natal chart for {name} born on {dob} at {tob} in {pob}, {country}. "
+        "Provide at least 4 chart aspects and interpretations."
+    )
+
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+
+        try:
+            content = response.text
+
+            if not content or content.strip() == "":
+                chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
+            else:
+                chart_by_gemini = content.strip()
+
+        except Exception as e:
+            chart_by_gemini = f"❌ Error extracting Gemini response: {str(e)}"
+
+    except Exception as e:
+        chart_by_gemini = f"❌ Error generating chart: {str(e)}"
+
+    return {
+        "job_id": job_id,
+        "status": "completed",
+        "chart_content": chart_by_gemini,
+        "chart_size_chars": len(chart_by_gemini),
+        "chart_size_words": len(chart_by_gemini.split()),
+        "source": {
+            "provider": "google",
+            "model": "gemini-1.5-flash"
+        }
     }
