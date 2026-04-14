@@ -698,7 +698,6 @@ def delete_chart(request: DeleteChartRequest):
     }
 
 
-app = FastAPI()
 client = OpenAI()
 
 @app.post("/create_chart_gpt")
