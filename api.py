@@ -781,7 +781,6 @@ async def create_chart_gemini(
     )
 
     try:
-        # NEW SDK STARTS HERE
         client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
         response = client.models.generate_content(
@@ -789,24 +788,38 @@ async def create_chart_gemini(
             contents=prompt
         )
 
-        content = response.text
-
-        if not content or content.strip() == "":
-            chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
-        else:
-            chart_by_gemini = content.strip()
+        # 🔥 TEMP CHANGE HERE
+        chart_by_gemini = "🔥 NEW SERVER WORKING 🔥"
 
     except Exception as e:
         chart_by_gemini = f"❌ Error generating chart: {str(e)}"
+    # try:
+    #     # NEW SDK STARTS HERE
+    #     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-    return {
-        "job_id": job_id,
-        "status": "completed",
-        "chart_content": chart_by_gemini,
-        "chart_size_chars": len(chart_by_gemini),
-        "chart_size_words": len(chart_by_gemini.split()),
-        "source": {
-            "provider": "google",
-            "model": "gemini-1.5-flash"
-        }
-    }
+    #     response = client.models.generate_content(
+    #         model="gemini-1.5-flash",
+    #         contents=prompt
+    #     )
+
+    #     content = response.text
+
+    #     if not content or content.strip() == "":
+    #         chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
+    #     else:
+    #         chart_by_gemini = content.strip()
+
+    # except Exception as e:
+    #     chart_by_gemini = f"❌ Error generating chart: {str(e)}"
+
+    # return {
+    #     "job_id": job_id,
+    #     "status": "completed",
+    #     "chart_content": chart_by_gemini,
+    #     "chart_size_chars": len(chart_by_gemini),
+    #     "chart_size_words": len(chart_by_gemini.split()),
+    #     "source": {
+    #         "provider": "google",
+    #         "model": "gemini-1.5-flash"
+    #     }
+    # }
