@@ -749,5 +749,6 @@ async def create_chart_gpt(
         "status": "completed",
         "chart_content": "Dummy chart generated successfully.",
         "chart_size_chars": 33,
-        "chart_size_words": 4
+        "chart_size_words": 4,
+        "source": "gpt-4o-mini"
     }
