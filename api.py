@@ -1,7 +1,7 @@
 import time
 import os
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
-
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
+from openai import OpenAI
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
 from notifier import notify_embedding_status
@@ -694,6 +694,8 @@ def delete_chart(request: DeleteChartRequest):
     }
 
 
+app = FastAPI()
+client = OpenAI()
 
 @app.post("/create_chart_gpt")
 async def create_chart_gpt(
@@ -706,19 +708,28 @@ async def create_chart_gpt(
     pob: str = Form(...),
     country: str = Form(...)
 ):
-    import time
-
     timestamp = int(time.time())
     job_id = f"job_{timestamp}"
 
-    # TODO: Replace with actual GPT logic
-    chart_by_gpt = (
-        f"Chart for {name} based on DOB: {dob}, TOB: {tob}, "
-        f"POB: {pob}, Country: {country}"
+    prompt = (
+        f"Create a natal chart for {name} born on {dob} at {tob} in {pob}, {country}. "
+        "Provide at least 4 chart aspects and interpretations."
     )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+
+        chart_by_gpt = response.choices[0].message.content
+
+    except Exception as e:
+        chart_by_gpt = f"Error generating chart: {str(e)}"
 
     return {
         "job_id": job_id,
-        "status": "processing",
+        "status": "completed",   # IMPORTANT CHANGE
         "chart_content": chart_by_gpt
     }
