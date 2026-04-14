@@ -784,7 +784,7 @@ async def create_chart_gemini(
     )
 
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-pro")
         response = model.generate_content(prompt)
 
         try:
@@ -809,6 +809,6 @@ async def create_chart_gemini(
         "chart_size_words": len(chart_by_gemini.split()),
         "source": {
             "provider": "google",
-            "model": "gemini-1.5-flash"
+            "model": "gemini-pro"
         }
     }
