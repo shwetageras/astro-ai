@@ -255,21 +255,16 @@ def process_text(text, file_id, file_name, job_id, timestamp):
         update_job(job_id, "failed", int(time.time()), str(e))
 
 
-def process_chart_text(content, file_id, job_id, user_id, profile_id, timestamp):
+def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
 
     try:
         print("PROCESS START:", job_id)
 
-        from kb_builder import chunk_text, create_embeddings
-        from vector_db import upsert_embeddings
-
         # Step 1: Chunk
         chunks = chunk_text(content)
-        print("CHUNKING DONE:", len(chunks), "chunks")
 
         # Step 2: Embeddings
         embeddings = create_embeddings(chunks)
-        print("EMBEDDINGS DONE:", job_id)
 
         # Step 3: Store in Pinecone
         upsert_embeddings(
@@ -278,18 +273,28 @@ def process_chart_text(content, file_id, job_id, user_id, profile_id, timestamp)
             embeddings,
             metadata={
                 "user_id": user_id,
-                "profile_id": profile_id
+                "profile_id": profile_id,
+                "chart_id": chart_id   
             }
         )
-        print("UPSERT DONE:", job_id)
 
-        # Step 4: Update DB
-        print("UPDATING DB:", job_id)
-        update_job(job_id, "completed", int(time.time()))
-        print("UPDATED SUCCESS:", job_id)
+        # Step 4: Build KB (IMPORTANT)
+        kb = build_kb(chunks, embeddings)
+        save_kb(kb, file_id)
+
+        # Step 5: Save metadata
+        save_metadata(file_id, "chart_text", int(time.time()))
+
+        # Step 6: Update correct DB
+        update_chart_job(job_id, "completed", int(time.time()))
+
+        # Step 7: Notify UI
+        notify_chart_status(job_id, chart_id, file_id)
+
+        print("PROCESS COMPLETE:", job_id)
 
     except Exception as e:
-        print("❌ ERROR in process_chart_text:", str(e))   # 🔥 VERY IMPORTANT
+        print("❌ ERROR:", str(e))
         update_chart_job(job_id, "failed", int(time.time()), str(e))
 
 
@@ -441,8 +446,15 @@ async def upload_chart(
     file_id = f"{timestamp}_{safe_name}"
     job_id = f"job_{timestamp}"
 
-    # Store job info
-    insert_job(job_id, file_id, name, "processing", timestamp)
+    insert_chart_job(
+        job_id,
+        chart_id,
+        user_id,
+        profile_id,
+        name,
+        "processing",
+        timestamp
+    )
 
     # 🔥 CASE 1: TEXT INPUT
     if isCharttype == "article":
@@ -456,6 +468,7 @@ async def upload_chart(
             content,
             file_id,
             job_id,
+            chart_id,   
             user_id,
             profile_id,
             timestamp
@@ -681,21 +694,31 @@ def delete_chart(request: DeleteChartRequest):
     }
 
 
-@app.post("/create_gpt_chart")
-def create_gpt_chart(request: GPTChartRequest):
 
+@app.post("/create_chart_gpt")
+async def create_chart_gpt(
+    user_id: int = Form(...),
+    profile_id: int = Form(...),
+    chart_id: int = Form(...),
+    name: str = Form(...),
+    dob: str = Form(...),
+    tob: str = Form(...),
+    pob: str = Form(...),
+    country: str = Form(...)
+):
     import time
 
-    print("\n===== GPT CHART REQUEST =====")
-    print(request)
+    timestamp = int(time.time())
+    job_id = f"job_{timestamp}"
 
-    job_id = f"chart_{int(time.time())}"
+    # TODO: Replace with actual GPT logic
+    chart_by_gpt = (
+        f"Chart for {name} based on DOB: {dob}, TOB: {tob}, "
+        f"POB: {pob}, Country: {country}"
+    )
 
     return {
-        "status": "success",
-        "message": "Chart generated successfully",
-        "data": {
-            "chart_file_id": job_id,
-            "chart_file": "This is GPT generated chart"
-        }
+        "job_id": job_id,
+        "status": "processing",
+        "chart_content": chart_by_gpt
     }
