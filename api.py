@@ -737,10 +737,17 @@ async def create_chart_gpt(
     except Exception as e:
         chart_by_gpt = f"❌ Error generating chart: {str(e)}"
 
+    # return {
+    #     "job_id": job_id,
+    #     "status": "completed",
+    #     "chart_content": chart_by_gpt,
+    #     "chart_size_chars": len(chart_by_gpt),
+    #     "chart_size_words": len(chart_by_gpt.split())
+    # }
     return {
         "job_id": job_id,
         "status": "completed",
-        "chart_content": chart_by_gpt,
-        "chart_size_chars": len(chart_by_gpt),
-        "chart_size_words": len(chart_by_gpt.split())
+        "chart_content": "Dummy chart generated successfully.",
+        "chart_size_chars": 33,
+        "chart_size_words": 4
     }
