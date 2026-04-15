@@ -723,9 +723,23 @@ async def create_chart_gpt(
     timestamp = int(time.time())
     job_id = f"job_{timestamp}"
 
+    # prompt = f"""
+    # Create a detailed natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
+    # Include planetary positions, aspects, and interpretations.
+    # """
+
     prompt = f"""
-    Create a detailed natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
-    Include planetary positions, aspects, and interpretations.
+    Create a natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
+
+    Include:
+    - Sun, Moon, Ascendant (with interpretation)
+    - Other planets (Mercury, Venus, Mars, Jupiter, Saturn)
+    - 4 aspects with interpretation
+
+    Keep format simple like:
+    Sun in ...
+    Moon in ...
+    Ascendant in ...
     """
 
     try:
