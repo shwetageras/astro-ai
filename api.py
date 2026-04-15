@@ -731,15 +731,30 @@ async def create_chart_gpt(
     prompt = f"""
     Create a natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
 
-    Include:
-    - Sun, Moon, Ascendant (with interpretation)
-    - Other planets (Mercury, Venus, Mars, Jupiter, Saturn)
-    - 4 aspects with interpretation
+    Give output ONLY in this format:
 
-    Keep format simple like:
-    Sun in ...
-    Moon in ...
-    Ascendant in ...
+    Sun in <sign>: <interpretation>
+    Moon in <sign>: <interpretation>
+    Ascendant in <sign>: <interpretation>
+    Mercury in <sign>: <interpretation>
+    Venus in <sign>: <interpretation>
+    Mars in <sign>: <interpretation>
+    Jupiter in <sign>: <interpretation>
+    Saturn in <sign>: <interpretation>
+
+    Aspects:
+    1. ...
+    2. ...
+    3. ...
+    4. ...
+
+    Summary: ...
+
+    Do NOT:
+    - add headings
+    - add markdown
+    - add extra text
+    - add introduction
     """
 
     try:
