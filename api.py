@@ -737,7 +737,7 @@ async def create_chart_gpt(
 
         try:
             content = response.choices[0].message.content
-            chart_by_gpt = json.loads(content)
+            chart_by_gpt = content.strip()
 
         except Exception as e:
             chart_by_gpt = {
