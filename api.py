@@ -243,17 +243,26 @@ def generate_answer_gemini(question, context):
 
     prompt = build_prompt(question, context)
 
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-    response = client.models.generate_content(
-        model="gemini-1.5-flash",
-        contents=prompt
-    )
-
     try:
-        return response.text.strip()
-    except:
-        return "Error: Empty response from Gemini"
+        model = genai.GenerativeModel("gemini-1.5-flash")
+
+        response = model.generate_content(prompt)
+
+        print("\n--- GEMINI RAW RESPONSE ---")
+        print(response)
+
+        if hasattr(response, "text") and response.text:
+            return response.text.strip()
+
+        elif hasattr(response, "candidates"):
+            return response.candidates[0].content.parts[0].text
+
+        else:
+            return "⚠️ Empty Gemini response"
+
+    except Exception as e:
+        print("❌ GEMINI ERROR:", str(e))
+        return f"Gemini error: {str(e)}"
 
 
 def process_text(text, file_id, file_name, job_id, timestamp):
