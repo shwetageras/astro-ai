@@ -725,7 +725,7 @@ async def create_chart_gpt(
 
     prompt = f"""
     Create a detailed natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
-    Include planetary positions, at least 4 aspects, and interpretations.
+    Include planetary positions, aspects, and interpretations.
     """
 
     try:
