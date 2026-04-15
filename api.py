@@ -724,25 +724,15 @@ async def create_chart_gpt(
     job_id = f"job_{timestamp}"
 
     prompt = f"""
-    Generate a natal/kundali chart interpretation.
-
-    Return response in JSON with:
-    - planets (sun, moon, ascendant, mercury, venus, mars, jupiter, saturn)
-    - 4 aspects
-    - short summary
-
-    Input:
-    Name: {name}
-    DOB: {dob}
-    TOB: {tob}
-    POB: {pob}, {country}
+    Create a detailed natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
+    Include planetary positions, at least 4 aspects, and interpretations.
     """
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
+            temperature=0.7,
             response_format={"type": "json_object"}
         )
 
