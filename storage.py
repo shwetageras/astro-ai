@@ -73,19 +73,23 @@ def save_kb_to_s3(kb_data, file_id):
 
 
 def delete_file(file_id):
+
+    # delete raw file (for file uploads)
     try:
         s3.delete_object(
             Bucket=BUCKET_NAME,
             Key=file_id
         )
-    except Exception as e:
-        print(f"⚠️ S3 file already missing: {file_id}")
+        print(f"Deleted file: {file_id}")
+    except Exception:
+        print(f"⚠️ No raw file found: {file_id}")
 
-    # Always try deleting KB JSON
+    # delete KB JSON (for article + file)
     try:
         s3.delete_object(
             Bucket=BUCKET_NAME,
             Key=f"kb/{file_id}.json"
         )
+        print(f"Deleted KB: kb/{file_id}.json")
     except Exception:
-        pass
+        print(f"⚠️ No KB JSON found: kb/{file_id}.json")

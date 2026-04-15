@@ -354,6 +354,10 @@ async def upload_kb(
         if not content:
             raise HTTPException(status_code=400, detail="Content is required for article type")
 
+        # STEP 1
+        insert_job(job_id, file_id, name, "processing", timestamp)
+
+        # STEP 2
         background_tasks.add_task(
             process_text,
             content,
@@ -640,6 +644,10 @@ def delete_kb(request: DeleteKBRequest):
 
     file_id = job["file_id"]
 
+    # DEBUG (IMPORTANT)
+    print("🧾 DELETE JOB:", job)
+    print("📁 FILE_ID:", file_id)
+
     try:
         # 2. Delete embeddings (Pinecone)
         print(f"🧹 Deleting embeddings for file_id: {file_id}")
@@ -716,35 +724,12 @@ async def create_chart_gpt(
     job_id = f"job_{timestamp}"
 
     prompt = f"""
-    Generate a natal chart interpretation.
+    Generate a natal/kundali chart interpretation.
 
-    Return ONLY valid JSON in this format:
-
-    {{
-    "planets": {{
-        "sun": "...",
-        "moon": "...",
-        "ascendant": "...",
-        "mercury": "...",
-        "venus": "...",
-        "mars": "...",
-        "jupiter": "...",
-        "saturn": "..."
-    }},
-    "aspects": [
-        "...",
-        "...",
-        "...",
-        "..."
-    ],
-    "summary": "..."
-    }}
-
-    Rules:
-    - No explanation
-    - No markdown
-    - No extra text
-    - Keep it concise
+    Return response in JSON with:
+    - planets (sun, moon, ascendant, mercury, venus, mars, jupiter, saturn)
+    - 4 aspects
+    - short summary
 
     Input:
     Name: {name}
