@@ -553,6 +553,23 @@ def ask_question(request: QuestionRequest):
     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
 
+    # chart_ids = request.chart_ids
+    # kb_ids = request.kb_id
+
+    # # Safety: ensure list
+    # if isinstance(chart_ids, str):
+    #     chart_ids = [chart_ids]
+
+    # if isinstance(kb_ids, str):
+    #     kb_ids = [kb_ids]
+
+    # def is_valid_ids(ids):
+    #     return ids and ids != ["0"] and ids != [""]
+
+    # use_chart = is_valid_ids(chart_ids)
+    # use_kb = is_valid_ids(kb_ids)
+
+
     # -------------------------------
     # STEP 1: INIT
     # -------------------------------
@@ -599,16 +616,28 @@ def ask_question(request: QuestionRequest):
             )
             all_chart_matches.extend(results.matches)
 
+
     # -------------------------------
     # STEP 5: KB RETRIEVAL
     # -------------------------------
     kb_results = None
 
     if use_kb:
-        if "kbn" in kb_ids:
+        if "job_n" in kb_ids:
             kb_results = query_kb_embeddings(query_embedding, top_k=10)
         else:
             kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
+
+    # # -------------------------------
+    # # STEP 5: KB RETRIEVAL
+    # # -------------------------------
+    # kb_results = None
+
+    # if use_kb:
+    #     if "kbn" in kb_ids:
+    #         kb_results = query_kb_embeddings(query_embedding, top_k=10)
+    #     else:
+    #         kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
 
     # -------------------------------
     # STEP 6: DEBUG
