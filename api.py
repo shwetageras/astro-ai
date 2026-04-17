@@ -240,25 +240,28 @@ def generate_answer(question, context):
 
 
 def generate_answer_gemini(question, context):
-
     prompt = build_prompt(question, context)
 
     try:
         model = genai.GenerativeModel("models/gemini-2.5-flash")
-
         response = model.generate_content(prompt)
 
-        print("\n--- GEMINI RAW RESPONSE ---")
-        print(response)
+        from typing import cast
 
-        if hasattr(response, "text") and response.text:
-            return response.text.strip()
+        res_text = getattr(response, "text", "")
 
-        elif hasattr(response, "candidates"):
-            return response.candidates[0].content.parts[0].text
+        if res_text:
+            return cast(str, res_text).strip()
 
-        else:
-            return "⚠️ Empty Gemini response"
+        if hasattr(response, "candidates") and response.candidates:
+            try:
+                candidate_text = response.candidates[0].content.parts[0].text
+                if isinstance(candidate_text, str):
+                    return candidate_text.strip()
+            except (AttributeError, IndexError):
+                pass
+
+        return "⚠️ Empty Gemini response"
 
     except Exception as e:
         print("❌ GEMINI ERROR:", str(e))
