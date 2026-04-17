@@ -244,7 +244,7 @@ def generate_answer_gemini(question, context):
     prompt = build_prompt(question, context)
 
     try:
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        model = genai.GenerativeModel("models/gemini-2.5-flash")
 
         response = model.generate_content(prompt)
 
@@ -958,66 +958,66 @@ async def create_chart_gpt(
         }
     }
 
-@app.post("/create_chart_gemini")
-async def create_chart_gemini(
-    user_id: int = Form(...),
-    profile_id: int = Form(...),
-    chart_id: int = Form(...),
-    name: str = Form(...),
-    dob: str = Form(...),
-    tob: str = Form(...),
-    pob: str = Form(...),
-    country: str = Form(...)
-):
+# @app.post("/create_chart_gemini")
+# async def create_chart_gemini(
+#     user_id: int = Form(...),
+#     profile_id: int = Form(...),
+#     chart_id: int = Form(...),
+#     name: str = Form(...),
+#     dob: str = Form(...),
+#     tob: str = Form(...),
+#     pob: str = Form(...),
+#     country: str = Form(...)
+# ):
 
-    timestamp = int(time.time())
-    job_id = f"job_{timestamp}"
+#     timestamp = int(time.time())
+#     job_id = f"job_{timestamp}"
 
-    prompt = (
-        f"Create a natal chart for {name} born on {dob} at {tob} in {pob}, {country}. "
-        "Provide at least 4 chart aspects and interpretations."
-    )
+#     prompt = (
+#         f"Create a natal chart for {name} born on {dob} at {tob} in {pob}, {country}. "
+#         "Provide at least 4 chart aspects and interpretations."
+#     )
 
-    try:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+#     try:
+#         client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt
-        )
+#         response = client.models.generate_content(
+#             model="gemini-1.5-flash",
+#             contents=prompt
+#         )
 
-        # 🔥 TEMP CHANGE HERE
-        chart_by_gemini = "🔥 NEW SERVER WORKING 🔥"
+#         # 🔥 TEMP CHANGE HERE
+#         chart_by_gemini = "🔥 NEW SERVER WORKING 🔥"
 
-    except Exception as e:
-        chart_by_gemini = f"❌ Error generating chart: {str(e)}"
-    # try:
-    #     # NEW SDK STARTS HERE
-    #     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+#     except Exception as e:
+#         chart_by_gemini = f"❌ Error generating chart: {str(e)}"
+#     # try:
+#     #     # NEW SDK STARTS HERE
+#     #     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-    #     response = client.models.generate_content(
-    #         model="gemini-1.5-flash",
-    #         contents=prompt
-    #     )
+#     #     response = client.models.generate_content(
+#     #         model="gemini-1.5-flash",
+#     #         contents=prompt
+#     #     )
 
-    #     content = response.text
+#     #     content = response.text
 
-    #     if not content or content.strip() == "":
-    #         chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
-    #     else:
-    #         chart_by_gemini = content.strip()
+#     #     if not content or content.strip() == "":
+#     #         chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
+#     #     else:
+#     #         chart_by_gemini = content.strip()
 
-    # except Exception as e:
-    #     chart_by_gemini = f"❌ Error generating chart: {str(e)}"
+#     # except Exception as e:
+#     #     chart_by_gemini = f"❌ Error generating chart: {str(e)}"
 
-    return {
-        "job_id": job_id,
-        "status": "completed",
-        "chart_content": chart_by_gemini,
-        "chart_size_chars": len(chart_by_gemini),
-        "chart_size_words": len(chart_by_gemini.split()),
-        "source": {
-            "provider": "google",
-            "model": "gemini-1.5-flash"
-        }
-    }
+#     return {
+#         "job_id": job_id,
+#         "status": "completed",
+#         "chart_content": chart_by_gemini,
+#         "chart_size_chars": len(chart_by_gemini),
+#         "chart_size_words": len(chart_by_gemini.split()),
+#         "source": {
+#             "provider": "google",
+#             "model": "gemini-1.5-flash"
+#         }
+#     }
