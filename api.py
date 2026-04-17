@@ -244,7 +244,7 @@ def generate_answer_gemini(question, context):
     prompt = build_prompt(question, context)
 
     try:
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
 
         response = model.generate_content(prompt)
 
@@ -1020,113 +1020,4 @@ async def create_chart_gemini(
             "provider": "google",
             "model": "gemini-1.5-flash"
         }
-    }
-
-@app.post("/qna_gemini")
-def qna_gemini(request: QuestionRequest):
-
-    chart_ids = request.chart_ids
-    kb_ids = request.kb_id
-
-    use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
-    use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
-
-    # -------------------------------
-    # STEP 1: INIT
-    # -------------------------------
-    qna_id = None
-    chart_details = []
-    all_chart_matches = []
-
-    # -------------------------------
-    # STEP 2: FETCH CHART + STORE QNA
-    # -------------------------------
-    if use_chart:
-        chart_details = get_chart_details_bulk(chart_ids)
-
-        if chart_details:
-            primary_chart = chart_details[0]
-
-            qna_id = insert_qna(
-                primary_chart["user_id"],
-                primary_chart["profile_id"],
-                primary_chart["chart_id"],
-                request.question
-            )
-
-    # -------------------------------
-    # STEP 3: EMBEDDING (UNCHANGED)
-    # -------------------------------
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
-    query_embedding = response.data[0].embedding
-
-    # -------------------------------
-    # STEP 4: CHART RETRIEVAL
-    # -------------------------------
-    if use_chart and chart_details:
-        for chart in chart_details:
-            results = query_chart_embeddings(
-                query_embedding,
-                chart["user_id"],
-                chart["profile_id"],
-                chart["chart_id"],
-                top_k=5
-            )
-            all_chart_matches.extend(results.matches)
-
-    # -------------------------------
-    # STEP 5: KB RETRIEVAL
-    # -------------------------------
-    kb_results = None
-
-    if use_kb:
-        if "kbn" in kb_ids:
-            kb_results = query_kb_embeddings(query_embedding, top_k=10)
-        else:
-            kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
-
-    # -------------------------------
-    # STEP 6: DEBUG
-    # -------------------------------
-    print("\n================ RETRIEVAL DEBUG (GEMINI) ================")
-
-    print("\n--- CHART RESULTS (Merged) ---")
-    for match in all_chart_matches:
-        print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    print("\n--- KB RESULTS ---")
-    if kb_results:
-        for match in kb_results.matches:
-            print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    # -------------------------------
-    # STEP 7: CONTEXT BUILDING
-    # -------------------------------
-    if not use_chart and not use_kb:
-        context = ""
-    else:
-        context = build_context(all_chart_matches, kb_results)
-
-    print("\n--- FINAL CONTEXT ---")
-    print(context[:1000])
-
-    # -------------------------------
-    # STEP 8: GEMINI ANSWER
-    # -------------------------------
-    answer = generate_answer_gemini(request.question, context)
-
-    # -------------------------------
-    # STEP 9: STORE ANSWER
-    # -------------------------------
-    if qna_id:
-        update_qna_answer(qna_id, answer)
-
-    # -------------------------------
-    # STEP 10: RESPONSE
-    # -------------------------------
-    return {
-        "answer": answer
     }
