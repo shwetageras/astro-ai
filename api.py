@@ -744,7 +744,7 @@ def qna_gemini(request: QuestionRequest):
     kb_results = None
 
     if use_kb:
-        if "kbn" in kb_ids:
+        if "job_n" in kb_ids:
             kb_results = query_kb_embeddings(query_embedding, top_k=10)
         else:
             kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
