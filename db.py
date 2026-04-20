@@ -143,19 +143,24 @@ def insert_qna(user_id, profile_id, chart_id, question):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT INTO qna_logs (user_id, profile_id, chart_id, question)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id
-    """, (user_id, profile_id, chart_id, question))
+    try:
+        cursor.execute("""
+            INSERT INTO qna_logs (user_id, profile_id, chart_id, question)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
+        """, (user_id, profile_id, chart_id, question))
 
-    qna_id = cursor.fetchone()[0]
+        row = cursor.fetchone()
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        if not row:
+            raise Exception("Insert failed: No ID returned")
 
-    return qna_id
+        conn.commit()
+        return row[0]
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def update_qna_answer(qna_id, answer):
@@ -216,3 +221,76 @@ def soft_delete_chart_job(job_id):
     conn.commit()
     cursor.close()
     conn.close()
+
+
+# -------------------------------
+# QNA SL FUNCTIONS
+# -------------------------------
+
+def insert_qna_sl(kb_id, question, llm_answer):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO qna_sl_logs (kb_id, question, llm_answer, created_at)
+        VALUES (%s, %s, %s, EXTRACT(EPOCH FROM NOW())::BIGINT)
+        RETURNING id
+    """, (kb_id, question, llm_answer))
+
+    row = cursor.fetchone()
+
+    if row is None:
+        cursor.close()
+        conn.close()
+        raise Exception("Insert failed: No ID returned")
+
+    qna_id = row[0]
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return qna_id
+
+
+def update_qna_sl_validation(qna_id, is_valid, corrected_answer=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE qna_sl_logs
+        SET is_valid = %s,
+            corrected_answer = %s
+        WHERE id = %s
+    """, (is_valid, corrected_answer, qna_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def get_qna_sl(qna_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT kb_id, question, llm_answer, corrected_answer, is_valid
+        FROM qna_sl_logs
+        WHERE id = %s
+    """, (qna_id,))
+
+    row = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if row:
+        return {
+            "kb_id": row[0],
+            "question": row[1],
+            "llm_answer": row[2],
+            "corrected_answer": row[3],
+            "is_valid": row[4]
+        }
+
+    return None

@@ -24,6 +24,14 @@ from typing import List
 from vector_db import query_kb_embeddings_filtered
 from dotenv import load_dotenv
 import google.generativeai as genai
+from db import insert_qna_sl
+from vector_db import query_kb_embeddings_filtered
+from kb_builder import client
+from prompts import build_prompt
+from db import update_qna_sl_validation, get_qna_sl
+from vector_db import upsert_embeddings
+from typing import Optional
+
 
 load_dotenv()
 
@@ -355,13 +363,22 @@ class DeleteChartRequest(BaseModel):
     job_id: str
 
 
-class GPTChartRequest(BaseModel):
-    name: str
-    dob: str   # keep string for flexibility (YYYY-MM-DD expected)
-    tob: str   # time of birth (HH:MM or HH:MM:SS)
-    pob: str   # place of birth
-    gender: str
+# class GPTChartRequest(BaseModel):
+#     name: str
+#     dob: str   # keep string for flexibility (YYYY-MM-DD expected)
+#     tob: str   # time of birth (HH:MM or HH:MM:SS)
+#     pob: str   # place of birth
+#     gender: str
 
+class QnaSLRequest(BaseModel):
+    kb_id: str
+    question: str
+
+
+class QnaSLValidationRequest(BaseModel):
+    qna_id: int
+    is_valid: bool
+    corrected_answer: Optional[str] = None
 
 # Create API → /upload_kb
 @app.post("/upload_kb")
@@ -878,149 +895,129 @@ def delete_chart(request: DeleteChartRequest):
     }
 
 
-client = OpenAI()
+@app.post("/qna_sl")
+def qna_sl(request: QnaSLRequest):
 
-@app.post("/create_chart_gpt")
-async def create_chart_gpt(
-    user_id: int = Form(...),
-    profile_id: int = Form(...),
-    chart_id: int = Form(...),
-    name: str = Form(...),
-    dob: str = Form(...),
-    tob: str = Form(...),
-    pob: str = Form(...),
-    country: str = Form(...)
-):
-    timestamp = int(time.time())
-    job_id = f"job_{timestamp}"
+    # -------------------------------
+    # STEP 1: CREATE EMBEDDING
+    # -------------------------------
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=request.question
+    )
+    query_embedding = response.data[0].embedding
 
-    # prompt = f"""
-    # Create a detailed natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
-    # Include planetary positions, aspects, and interpretations.
-    # """
+    # -------------------------------
+    # STEP 2: RETRIEVE KB ONLY
+    # -------------------------------
+    kb_results = query_kb_embeddings_filtered(
+        query_embedding,
+        [request.kb_id],
+        top_k=5
+    )
 
-    prompt = f"""
-    Create a natal/kundali chart for {name} born on {dob} at {tob} in {pob}, {country}.
+    # -------------------------------
+    # STEP 3: BUILD CONTEXT
+    # -------------------------------
+    context = ""
+    for match in kb_results.matches:
+        context += match.metadata.get("text", "") + "\n"
 
-    Give output ONLY in this format:
+    context = context[:3000]
 
-    Sun in <sign>: <interpretation>
-    Moon in <sign>: <interpretation>
-    Ascendant in <sign>: <interpretation>
-    Mercury in <sign>: <interpretation>
-    Venus in <sign>: <interpretation>
-    Mars in <sign>: <interpretation>
-    Jupiter in <sign>: <interpretation>
-    Saturn in <sign>: <interpretation>
+    # -------------------------------
+    # STEP 4: GENERATE ANSWER
+    # -------------------------------
+    prompt = build_prompt(request.question, context)
 
-    Aspects:
-    1. ...
-    2. ...
-    3. ...
-    4. ...
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": "You are a careful domain expert."},
+            {"role": "user", "content": prompt}
+        ]
+    )
 
-    Summary: ...
+    answer = response.choices[0].message.content
 
-    Do NOT:
-    - add headings
-    - add markdown
-    - add extra text
-    - add introduction
-    """
+    # -------------------------------
+    # STEP 5: STORE
+    # -------------------------------
+    qna_id = insert_qna_sl(
+        request.kb_id,
+        request.question,
+        answer
+    )
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-
-        try:
-            content = response.choices[0].message.content
-            chart_by_gpt = content.strip()
-
-        except Exception as e:
-            chart_by_gpt = {
-                "error": f"Parsing failed: {str(e)}"
-            }
-
-    except Exception as e:
-        chart_by_gpt = {
-            "error": f"Generation failed: {str(e)}"
-        }
-
+    # -------------------------------
+    # STEP 6: RETURN
+    # -------------------------------
     return {
-        "job_id": job_id,
-        "status": "completed",
-        "chart_content": chart_by_gpt,
-        "chart_size_chars": len(str(chart_by_gpt)),   # ✅ fixed
-        "chart_size_words": len(str(chart_by_gpt).split()),  # ✅ fixed
-        "source": {
-            "provider": "openai",
-            "model": "gpt-4o-mini"
-        }
+        "qna_id": qna_id,
+        "answer": answer
     }
 
-# @app.post("/create_chart_gemini")
-# async def create_chart_gemini(
-#     user_id: int = Form(...),
-#     profile_id: int = Form(...),
-#     chart_id: int = Form(...),
-#     name: str = Form(...),
-#     dob: str = Form(...),
-#     tob: str = Form(...),
-#     pob: str = Form(...),
-#     country: str = Form(...)
-# ):
 
-#     timestamp = int(time.time())
-#     job_id = f"job_{timestamp}"
+@app.post("/qna_sl_validation")
+def qna_sl_validation(request: QnaSLValidationRequest):
 
-#     prompt = (
-#         f"Create a natal chart for {name} born on {dob} at {tob} in {pob}, {country}. "
-#         "Provide at least 4 chart aspects and interpretations."
-#     )
+    # -------------------------------
+    # STEP 1: FETCH ORIGINAL QNA
+    # -------------------------------
+    record = get_qna_sl(request.qna_id)
 
-#     try:
-#         client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    if not record:
+        raise HTTPException(status_code=404, detail="QnA not found")
 
-#         response = client.models.generate_content(
-#             model="gemini-1.5-flash",
-#             contents=prompt
-#         )
+    # -------------------------------
+    # STEP 2: DECIDE FINAL ANSWER
+    # -------------------------------
+    if request.is_valid:
+        final_answer = record["llm_answer"]
+    else:
+        if not request.corrected_answer:
+            raise HTTPException(
+                status_code=400,
+                detail="Corrected answer required when invalid"
+            )
+        final_answer = request.corrected_answer
 
-#         # 🔥 TEMP CHANGE HERE
-#         chart_by_gemini = "🔥 NEW SERVER WORKING 🔥"
+    # -------------------------------
+    # STEP 3: UPDATE DB
+    # -------------------------------
+    update_qna_sl_validation(
+        request.qna_id,
+        request.is_valid,
+        request.corrected_answer
+    )
 
-#     except Exception as e:
-#         chart_by_gemini = f"❌ Error generating chart: {str(e)}"
-#     # try:
-#     #     # NEW SDK STARTS HERE
-#     #     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    # -------------------------------
+    # STEP 4: CREATE EMBEDDING (LEARNING STEP)
+    # -------------------------------
+    text = f"Q: {record['question']} A: {final_answer}"
 
-#     #     response = client.models.generate_content(
-#     #         model="gemini-1.5-flash",
-#     #         contents=prompt
-#     #     )
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    embedding = response.data[0].embedding
 
-#     #     content = response.text
+    # -------------------------------
+    # STEP 5: STORE IN VECTOR DB
+    # -------------------------------
+    upsert_embeddings(
+        file_id=f"qna_sl_{request.qna_id}",
+        chunks=[text],
+        embeddings=[embedding],
+        metadata={
+            "type": "qna_sl",
+            "kb_id": record["kb_id"]
+        }
+    )
 
-#     #     if not content or content.strip() == "":
-#     #         chart_by_gemini = "⚠️ Empty response from Gemini. Please try again."
-#     #     else:
-#     #         chart_by_gemini = content.strip()
-
-#     # except Exception as e:
-#     #     chart_by_gemini = f"❌ Error generating chart: {str(e)}"
-
-#     return {
-#         "job_id": job_id,
-#         "status": "completed",
-#         "chart_content": chart_by_gemini,
-#         "chart_size_chars": len(chart_by_gemini),
-#         "chart_size_words": len(chart_by_gemini.split()),
-#         "source": {
-#             "provider": "google",
-#             "model": "gemini-1.5-flash"
-#         }
-#     }
+    # -------------------------------
+    # STEP 6: RESPONSE
+    # -------------------------------
+    return {
+        "status": "validated and learned"
+    }
