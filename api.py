@@ -33,6 +33,8 @@ from db import update_qna_sl_validation, get_qna_sl
 from vector_db import upsert_embeddings
 from typing import Optional
 from db import mark_qna_ml_ready
+from pydantic import BaseModel
+
 
 load_dotenv()
 
@@ -373,6 +375,11 @@ class QnaSLValidationRequest(BaseModel):
     qna_id: int
     is_valid: bool
     corrected_answer: Optional[str] = None
+
+
+class QnaMLRequest(BaseModel):
+    qna_id: int
+
 
 # Create API → /upload_kb
 @app.post("/upload_kb")
@@ -1018,7 +1025,7 @@ def qna_sl_validation(request: QnaSLValidationRequest):
 
 
 @app.post("/qna_ml_submit")
-def qna_ml_submit(request):
+def qna_ml_submit(request: QnaMLRequest):
 
     record = get_qna_sl(request.qna_id)
 
