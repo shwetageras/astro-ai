@@ -1,6 +1,7 @@
 import time
 import os
 import json
+import requests
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from openai import OpenAI
 from google import genai
@@ -31,7 +32,7 @@ from prompts import build_prompt
 from db import update_qna_sl_validation, get_qna_sl
 from vector_db import upsert_embeddings
 from typing import Optional
-
+from db import mark_qna_ml_ready
 
 load_dotenv()
 
@@ -362,13 +363,6 @@ class DeleteKBRequest(BaseModel):
 class DeleteChartRequest(BaseModel):
     job_id: str
 
-
-# class GPTChartRequest(BaseModel):
-#     name: str
-#     dob: str   # keep string for flexibility (YYYY-MM-DD expected)
-#     tob: str   # time of birth (HH:MM or HH:MM:SS)
-#     pob: str   # place of birth
-#     gender: str
 
 class QnaSLRequest(BaseModel):
     kb_id: str
@@ -1020,4 +1014,56 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     # -------------------------------
     return {
         "status": "validated and learned"
+    }
+
+
+@app.post("/qna_ml_submit")
+def qna_ml_submit(request):
+
+    record = get_qna_sl(request.qna_id)
+
+    if not record:
+        raise HTTPException(404, "Not found")
+
+    # -------------------------------
+    # Step 1: Prepare data
+    # -------------------------------
+    final_answer = (
+        record["corrected_answer"]
+        if not record["is_valid"]
+        else record["llm_answer"]
+    )
+
+    payload = {
+        "question": record["question"],
+        "answer": final_answer,
+        "kb_id": record["kb_id"]
+    }
+
+    # -------------------------------
+    # Step 2: Call ML pipeline
+    # -------------------------------
+    # try:
+    #     response = requests.post(
+    #         "http://ml-pipeline/api/train-data",
+    #         json=payload,
+    #         timeout=5
+    #     )
+
+    #     success = response.status_code == 200
+
+    # except Exception:
+    #     success = False
+
+  
+    success = True
+
+    # -------------------------------
+    # Step 3: Update flag
+    # -------------------------------
+    if success:
+        mark_qna_ml_ready(request.qna_id)
+
+    return {
+        "ml_status": success
     }

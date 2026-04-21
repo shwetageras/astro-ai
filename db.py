@@ -259,8 +259,10 @@ def update_qna_sl_validation(qna_id, is_valid, corrected_answer=None):
 
     cursor.execute("""
         UPDATE qna_sl_logs
-        SET is_valid = %s,
-            corrected_answer = %s
+        SET 
+            is_valid = %s,
+            corrected_answer = %s,
+            tr_sl = TRUE
         WHERE id = %s
     """, (is_valid, corrected_answer, qna_id))
 
@@ -294,3 +296,19 @@ def get_qna_sl(qna_id):
         }
 
     return None
+
+
+
+def mark_qna_ml_ready(qna_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE qna_sl_logs
+        SET tr_ml = TRUE
+        WHERE id = %s
+    """, (qna_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
