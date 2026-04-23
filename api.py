@@ -378,7 +378,7 @@ class QnaSLValidationRequest(BaseModel):
 
 
 class QnaMLRequest(BaseModel):
-    qna_id: int
+    qna_ids: List[int]
 
 
 # Create API → /upload_kb
@@ -1027,50 +1027,43 @@ def qna_sl_validation(request: QnaSLValidationRequest):
 @app.post("/qna_ml_submit")
 def qna_ml_submit(request: QnaMLRequest):
 
-    record = get_qna_sl(request.qna_id)
+    results = []
 
-    if not record:
-        raise HTTPException(404, "Not found")
+    for qna_id in request.qna_ids:
 
-    # -------------------------------
-    # Step 1: Prepare data
-    # -------------------------------
-    final_answer = (
-        record["corrected_answer"]
-        if not record["is_valid"]
-        else record["llm_answer"]
-    )
+        record = get_qna_sl(qna_id)
 
-    payload = {
-        "question": record["question"],
-        "answer": final_answer,
-        "kb_id": record["kb_id"]
-    }
+        if not record:
+            results.append({
+                "qna_id": qna_id,
+                "status": "not_found"
+            })
+            continue
 
-    # -------------------------------
-    # Step 2: Call ML pipeline
-    # -------------------------------
-    # try:
-    #     response = requests.post(
-    #         "http://ml-pipeline/api/train-data",
-    #         json=payload,
-    #         timeout=5
-    #     )
+        final_answer = record["corrected_answer"]
 
-    #     success = response.status_code == 200
+        payload = {
+            "question": record["question"],
+            "answer": final_answer,
+            "kb_id": record["kb_id"]
+        }
 
-    # except Exception:
-    #     success = False
+        # -------------------------------
+        # Step 2: Call ML pipeline (TEMP MOCK)
+        # -------------------------------
+        success = True
 
-  
-    success = True
+        # -------------------------------
+        # Step 3: Update flag
+        # -------------------------------
+        if success:
+            mark_qna_ml_ready(qna_id)
 
-    # -------------------------------
-    # Step 3: Update flag
-    # -------------------------------
-    if success:
-        mark_qna_ml_ready(request.qna_id)
+        results.append({
+            "qna_id": qna_id,
+            "ml_status": success
+        })
 
     return {
-        "ml_status": success
+        "results": results
     }
