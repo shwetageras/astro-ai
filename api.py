@@ -993,7 +993,7 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     )
 
     # -------------------------------
-    # STEP 4: CREATE EMBEDDING (LEARNING STEP)
+    # STEP 4: CREATE EMBEDDING
     # -------------------------------
     text = f"Q: {record['question']} A: {final_answer}"
 
