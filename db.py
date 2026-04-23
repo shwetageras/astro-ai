@@ -257,14 +257,37 @@ def update_qna_sl_validation(qna_id, is_valid, corrected_answer=None):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE qna_sl_logs
-        SET 
-            is_valid = %s,
-            corrected_answer = %s,
-            tr_sl = TRUE
-        WHERE id = %s
-    """, (is_valid, corrected_answer, qna_id))
+    # If VALID → use llm_answer as corrected_answer
+    if is_valid is True:
+        cursor.execute("""
+            UPDATE qna_sl_logs
+            SET 
+                is_valid = %s,
+                corrected_answer = llm_answer,
+                tr_sl = TRUE
+            WHERE id = %s
+        """, (is_valid, qna_id))
+
+    # If NOT VALID → use user provided corrected_answer
+    elif is_valid is False:
+        cursor.execute("""
+            UPDATE qna_sl_logs
+            SET 
+                is_valid = %s,
+                corrected_answer = %s,
+                tr_sl = TRUE
+            WHERE id = %s
+        """, (is_valid, corrected_answer, qna_id))
+
+    # If NOT REQUIRED → do nothing to corrected_answer
+    else:
+        cursor.execute("""
+            UPDATE qna_sl_logs
+            SET 
+                is_valid = NULL,
+                tr_sl = TRUE
+            WHERE id = %s
+        """, (qna_id,))
 
     conn.commit()
     cursor.close()
