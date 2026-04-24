@@ -605,13 +605,17 @@ def ask_question(request: QuestionRequest):
     sl_score = sl_result.get("score")
     sl_answer = sl_result.get("answer")
 
+    # 🔍 DEBUG PRINTS (ADD HERE)
+    print("SL FOUND:", sl_found)
+    print("SL SCORE:", sl_score)
+    print("SL ANSWER EXISTS:", bool(sl_answer))
+
     # -------------------------------
     # STEP 0.2: Decision logic
     # -------------------------------
-    use_sl_as_context = False
-
     if sl_found and sl_score is not None:
         if sl_score >= 0.75:
+            print("RETURNING FROM SL DIRECTLY")
             return {
                 "source": "SL",
                 "score": sl_score,
@@ -619,7 +623,8 @@ def ask_question(request: QuestionRequest):
             }
         elif 0.60 <= sl_score < 0.75:
             use_sl_as_context = True
-
+    # 🔍 DEBUG
+    print("USING SL CONTEXT:", use_sl_as_context)
 
     # chart_ids = request.chart_ids
     # kb_ids = request.kb_id
@@ -732,7 +737,9 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # Inject SL context (if medium confidence)
     # -------------------------------
-    if use_sl_as_context:
+    print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
+    
+    if use_sl_as_context and sl_answer:
         context = f"""
     Previous learned answer (may be helpful):
     {sl_answer}
