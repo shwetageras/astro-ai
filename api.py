@@ -748,7 +748,7 @@ def ask_question(request: QuestionRequest):
 
     if use_sl_as_context and sl_answer:
         context = (
-            "Previous learned answer (use as base, refine not repeat):\n"
+            "Previous learned answer (use as base, improve and make concise):\n"
             f"{sl_answer}\n\n"
             f"{context}"
         )
