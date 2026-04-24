@@ -2,6 +2,7 @@ from pypdf import PdfReader
 from openai import OpenAI
 import os
 import re
+import tiktoken
 import json
 from dotenv import load_dotenv
 from storage import save_kb_to_s3
@@ -27,25 +28,41 @@ def read_text_file(file_path):
 # -------------------------------
 # TEXT CHUNKING
 # -------------------------------
-def chunk_text(text, max_chunk_size=500):
+def chunk_text(text, max_tokens=400):
+
+    enc = tiktoken.get_encoding("cl100k_base")
+
+    # Split into sentences
     sentences = re.split(r'(?<=[.!?])\s+', text)
 
     chunks = []
     current_chunk = ""
+    current_tokens = 0
 
     for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
+        if not sentence.strip():
             continue
 
-        # If adding this sentence stays within limit → add
-        if len(current_chunk) + len(sentence) <= max_chunk_size:
+        sentence_tokens = enc.encode(sentence)
+
+        # If single sentence itself is too large → force split
+        if len(sentence_tokens) > max_tokens:
+            for i in range(0, len(sentence_tokens), max_tokens):
+                chunk_tokens = sentence_tokens[i:i + max_tokens]
+                chunks.append(enc.decode(chunk_tokens))
+            continue
+
+        # If fits → add to current chunk
+        if current_tokens + len(sentence_tokens) <= max_tokens:
             current_chunk += " " + sentence
+            current_tokens += len(sentence_tokens)
         else:
             # Save current chunk
             if current_chunk:
                 chunks.append(current_chunk.strip())
+
             current_chunk = sentence
+            current_tokens = len(sentence_tokens)
 
     # Add last chunk
     if current_chunk:
@@ -65,7 +82,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # EMBEDDINGS
 # -------------------------------
 def create_embeddings(chunks):
-    BATCH_SIZE = 100
+    BATCH_SIZE = 50
     all_embeddings = []
 
     for i in range(0, len(chunks), BATCH_SIZE):
