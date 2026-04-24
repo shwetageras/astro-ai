@@ -575,12 +575,19 @@ async def upload_chart(
 def ask_question(request: QuestionRequest):
 
     chart_ids = request.chart_ids
+    
     kb_ids = request.kb_id
 
-    # ensure list
+    # normalize safely
     if isinstance(kb_ids, str):
         kb_ids = [kb_ids]
+    elif not isinstance(kb_ids, list):
+        kb_ids = []
+
     kb_id = kb_ids[0] if kb_ids else ""
+
+    print("KB IDS:", kb_ids)
+    print("KB ID USED:", kb_id)
 
     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
@@ -738,7 +745,7 @@ def ask_question(request: QuestionRequest):
     # Inject SL context (if medium confidence)
     # -------------------------------
     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
-    
+
     if use_sl_as_context and sl_answer:
         context = f"""
     Previous learned answer (may be helpful):
