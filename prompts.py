@@ -55,6 +55,11 @@ GUIDELINES:
    - Be clear, confident, and practical
    - Avoid unnecessary introductions like "Thank you for your question"   
 
+8. PERSONALIZATION:
+   - Tailor the response to feel specific, even if exact birth details are missing
+   - Avoid sounding generic
+   - Use phrases like "based on your situation" or "in your case"
+   
 ---------------------
 PROVIDED CONTEXT:
 ---------------------
