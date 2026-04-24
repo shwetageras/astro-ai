@@ -91,3 +91,16 @@ def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=5):
         }
     )
     return results
+
+
+def query_qna_sl_embeddings(query_embedding, kb_id, top_k=3):
+    results = index.query(
+        vector=query_embedding,
+        top_k=top_k,
+        include_metadata=True,
+        filter={
+            "type": "qna_sl",
+            "kb_id": kb_id
+        }
+    )
+    return results

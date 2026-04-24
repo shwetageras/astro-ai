@@ -34,6 +34,7 @@ from vector_db import upsert_embeddings
 from typing import Optional
 from db import mark_qna_ml_ready
 from pydantic import BaseModel
+from vector_db import query_qna_sl_embeddings
 
 
 load_dotenv()
@@ -379,6 +380,11 @@ class QnaSLValidationRequest(BaseModel):
 
 class QnaMLRequest(BaseModel):
     qna_ids: List[int]
+
+
+class QnaSearchRequest(BaseModel):
+    question: str
+    kb_id: str
 
 
 # Create API → /upload_kb
@@ -1066,4 +1072,43 @@ def qna_ml_submit(request: QnaMLRequest):
 
     return {
         "results": results
+    }
+
+
+@app.post("/qna_sl_search")
+def qna_sl_search(request: QnaSearchRequest):
+
+    # -------------------------------
+    # STEP 1: Create embedding
+    # -------------------------------
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=request.question
+    )
+    query_embedding = response.data[0].embedding
+
+    # -------------------------------
+    # STEP 2: Query SL memory
+    # -------------------------------
+    results = query_qna_sl_embeddings(
+        query_embedding,
+        request.kb_id
+    )
+
+    if not results.matches:
+        return {
+            "found": False,
+            "score": None,
+            "answer": None
+        }
+
+    best = results.matches[0]
+
+    # -------------------------------
+    # STEP 3: Return raw result
+    # -------------------------------
+    return {
+        "found": True,
+        "score": best.score,
+        "answer": best.metadata.get("text")
     }
