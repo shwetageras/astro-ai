@@ -1001,7 +1001,7 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     # -------------------------------
     # STEP 4: CREATE EMBEDDING
     # -------------------------------
-    text = f"Q: {record['question']} A: {final_answer}"
+    text = f"{record['question']} {final_answer}"
 
     response = client.embeddings.create(
         model="text-embedding-3-small",
@@ -1018,7 +1018,9 @@ def qna_sl_validation(request: QnaSLValidationRequest):
         embeddings=[embedding],
         metadata={
             "type": "qna_sl",
-            "kb_id": record["kb_id"]
+            "kb_id": record["kb_id"],
+            "question": record["question"],
+            "answer": final_answer
         }
     )
 
@@ -1110,5 +1112,5 @@ def qna_sl_search(request: QnaSearchRequest):
     return {
         "found": True,
         "score": best.score,
-        "answer": best.metadata.get("text")
+        "answer": best.metadata.get("answer")
     }

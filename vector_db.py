@@ -1,4 +1,6 @@
+# pyright: reportOptionalMemberAccess=false
 from pinecone import Pinecone, ServerlessSpec
+from typing import Any
 import os
 from dotenv import load_dotenv
 
