@@ -1080,6 +1080,7 @@ def qna_ml_submit(request: QnaMLRequest):
 @app.post("/qna_sl_search")
 def qna_sl_search(request: QnaSearchRequest):
 
+    print("INSIDE QNA SL SEARCH")
     # -------------------------------
     # STEP 1: Create embedding
     # -------------------------------
