@@ -577,8 +577,49 @@ def ask_question(request: QuestionRequest):
     chart_ids = request.chart_ids
     kb_ids = request.kb_id
 
+    # ensure list
+    if isinstance(kb_ids, str):
+        kb_ids = [kb_ids]
+    kb_id = kb_ids[0] if kb_ids else ""
+
     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+
+    # -------------------------------
+    # STEP 0: Initialize SL vars
+    # -------------------------------
+    use_sl_as_context = False
+    sl_answer = None
+
+    # -------------------------------
+    # STEP 0.1: Check SL memory
+    # -------------------------------
+    sl_result = qna_sl_search(
+        QnaSearchRequest(
+            question=request.question,
+            kb_id=kb_id
+        )
+    )
+
+    sl_found = sl_result.get("found")
+    sl_score = sl_result.get("score")
+    sl_answer = sl_result.get("answer")
+
+    # -------------------------------
+    # STEP 0.2: Decision logic
+    # -------------------------------
+    use_sl_as_context = False
+
+    if sl_found and sl_score is not None:
+        if sl_score >= 0.75:
+            return {
+                "source": "SL",
+                "score": sl_score,
+                "answer": sl_answer
+            }
+        elif 0.60 <= sl_score < 0.75:
+            use_sl_as_context = True
+
 
     # chart_ids = request.chart_ids
     # kb_ids = request.kb_id
@@ -688,8 +729,20 @@ def ask_question(request: QuestionRequest):
     else:
         context = build_context(all_chart_matches, kb_results)
 
+    # -------------------------------
+    # Inject SL context (if medium confidence)
+    # -------------------------------
+    if use_sl_as_context:
+        context = f"""
+    Previous learned answer (may be helpful):
+    {sl_answer}
+
+    {context}
+    """
+
     print("\n--- FINAL CONTEXT ---")
     print(context[:1000])
+
 
     # -------------------------------
     # STEP 8: GENERATE ANSWER
@@ -794,12 +847,9 @@ def qna_gemini(request: QuestionRequest):
     # STEP 7: CONTEXT BUILDING
     # -------------------------------
     if not use_chart and not use_kb:
-        context = ""   # 🔥 PURE LLM MODE
+        context = ""
     else:
         context = build_context(all_chart_matches, kb_results)
-
-    print("\n--- FINAL CONTEXT ---")
-    print(context[:1000])
 
     # -------------------------------
     # STEP 8: GENERATE ANSWER
