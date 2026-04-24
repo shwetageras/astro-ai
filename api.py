@@ -621,14 +621,14 @@ def ask_question(request: QuestionRequest):
     # STEP 0.2: Decision logic
     # -------------------------------
     if sl_found and sl_score is not None:
-        if sl_score >= 0.75:
+        if sl_score >= 0.70:
             print("RETURNING FROM SL DIRECTLY")
             return {
                 "source": "SL",
                 "score": sl_score,
                 "answer": sl_answer
             }
-        elif 0.60 <= sl_score < 0.75:
+        elif 0.60 <= sl_score < 0.70:
             use_sl_as_context = True
     # 🔍 DEBUG
     print("USING SL CONTEXT:", use_sl_as_context)
@@ -773,9 +773,10 @@ def ask_question(request: QuestionRequest):
     # STEP 10: RESPONSE
     # -------------------------------
     return {
+        "source": "SL+LLM" if use_sl_as_context else "LLM",
+        "used_sl": use_sl_as_context,
         "answer": answer
     }
-
 
 @app.post("/qna_gemini")
 def qna_gemini(request: QuestionRequest):
