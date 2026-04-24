@@ -747,12 +747,11 @@ def ask_question(request: QuestionRequest):
     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
 
     if use_sl_as_context and sl_answer:
-        context = f"""
-    Previous learned answer (may be helpful):
-    {sl_answer}
-
-    {context}
-    """
+        context = (
+            "Previous learned answer (use as base, refine not repeat):\n"
+            f"{sl_answer}\n\n"
+            f"{context}"
+        )
 
     print("\n--- FINAL CONTEXT ---")
     print(context[:1000])

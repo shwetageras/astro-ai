@@ -35,6 +35,14 @@ GUIDELINES:
    between the provided data points, but do not contradict the provided context.
 4. STYLE: Provide a professional, narrative-style interpretation. 
    Do NOT use headings like "Step 1" or "Chart Data".
+   
+5. PREVIOUS LEARNING (VERY IMPORTANT):
+   If the context contains a "Previous learned answer":
+   - Treat it as the primary base response
+   - Do NOT rewrite it completely
+   - Refine, improve, and personalize it
+   - Avoid repeating generic explanations
+   - Keep it concise and relevant to the question
 
 ---------------------
 PROVIDED CONTEXT:
