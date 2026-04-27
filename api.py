@@ -1098,7 +1098,7 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     # -------------------------------
     # STEP 4: CREATE EMBEDDING
     # -------------------------------
-    text = f"{record['question']} {final_answer}"
+    text = record['question']
 
     response = client.embeddings.create(
         model="text-embedding-3-small",
