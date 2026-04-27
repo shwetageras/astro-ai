@@ -609,27 +609,60 @@ def ask_question(request: QuestionRequest):
     )
 
     sl_found = sl_result.get("found")
-    sl_score = sl_result.get("score")
-    sl_answer = sl_result.get("answer")
+    matches = sl_result.get("matches", [])
 
-    # 🔍 DEBUG PRINTS (ADD HERE)
+    if not matches:
+        sl_found = False
+        sl_score = None
+        sl_answer = None
+        second = None
+    else:
+        best = matches[0]
+        second = matches[1] if len(matches) > 1 else None
+
+        sl_score = best["score"]
+        sl_answer = best["answer"]
+
+    # 🔍 DEBUG PRINTS
     print("SL FOUND:", sl_found)
     print("SL SCORE:", sl_score)
     print("SL ANSWER EXISTS:", bool(sl_answer))
+    print("SECOND MATCH SCORE:", second["score"] if second else None)
 
     # -------------------------------
     # STEP 0.2: Decision logic
     # -------------------------------
+    use_sl_as_context = False   # ✅ ALWAYS initialize
+    sl_context = None           # ✅ ALWAYS initialize
+
     if sl_found and sl_score is not None:
-        if sl_score >= 0.70:
-            print("RETURNING FROM SL DIRECTLY")
+
+        # 🟢 STRONG → reuse
+        if sl_score >= 0.80 and (second is None or (sl_score - second["score"]) >= 0.05):
             return {
                 "source": "SL",
                 "score": sl_score,
                 "answer": sl_answer
             }
-        elif 0.60 <= sl_score < 0.70:
+
+        # 🟡 MEDIUM → use multiple
+        elif sl_score >= 0.60:
+            selected_matches = [m for m in matches if m["score"] >= 0.60][:3]
+
+            sl_context = "\n\n".join([
+                f"Previous QnA (score {round(m['score'],2)}):\n"
+                f"Q: {m.get('question','')}\n"
+                f"A: {m['answer']}"
+                for m in selected_matches
+            ])
+
             use_sl_as_context = True
+
+        # 🔴 LOW → ignore
+        else:
+            use_sl_as_context = False
+            sl_context = None
+
     # 🔍 DEBUG
     print("USING SL CONTEXT:", use_sl_as_context)
 
@@ -746,10 +779,10 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
 
-    if use_sl_as_context and sl_answer:
+    if use_sl_as_context and sl_context:
         context = (
-            "Previous learned answer (use as base, improve and make concise):\n"
-            f"{sl_answer}\n\n"
+            "Relevant past learned answers (use as base, refine and synthesize):\n"
+            f"{sl_context}\n\n"
             f"{context}"
         )
 
@@ -1145,18 +1178,13 @@ def qna_ml_submit(request: QnaMLRequest):
 def qna_sl_search(request: QnaSearchRequest):
 
     print("INSIDE QNA SL SEARCH")
-    # -------------------------------
-    # STEP 1: Create embedding
-    # -------------------------------
+
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=request.question
     )
     query_embedding = response.data[0].embedding
 
-    # -------------------------------
-    # STEP 2: Query SL memory
-    # -------------------------------
     results = query_qna_sl_embeddings(
         query_embedding,
         request.kb_id
@@ -1165,17 +1193,21 @@ def qna_sl_search(request: QnaSearchRequest):
     if not results.matches:
         return {
             "found": False,
-            "score": None,
-            "answer": None
+            "matches": []
         }
 
-    best = results.matches[0]
+    # NEW CODE STARTS HERE
+    TOP_K = 3
+    matches = results.matches[:TOP_K]
 
-    # -------------------------------
-    # STEP 3: Return raw result
-    # -------------------------------
     return {
         "found": True,
-        "score": best.score,
-        "answer": best.metadata.get("answer")
+        "matches": [
+            {
+                "score": m.score,
+                "question": m.metadata.get("question"),
+                "answer": m.metadata.get("answer")
+            }
+            for m in matches
+        ]
     }
