@@ -596,8 +596,7 @@ def ask_question(request: QuestionRequest):
     # STEP 0: Initialize SL vars
     # -------------------------------
     use_sl_as_context = False
-    sl_answer = None
-
+    
     # -------------------------------
     # STEP 0.1: Check SL memory
     # -------------------------------
@@ -614,45 +613,37 @@ def ask_question(request: QuestionRequest):
     if not matches:
         sl_found = False
         sl_score = None
-        sl_answer = None
         second = None
     else:
         best = matches[0]
         second = matches[1] if len(matches) > 1 else None
 
         sl_score = best["score"]
-        sl_answer = best["answer"]
-
+        
     # 🔍 DEBUG PRINTS
     print("SL FOUND:", sl_found)
-    print("SL SCORE:", sl_score)
-    print("SL ANSWER EXISTS:", bool(sl_answer))
+    print("FIRST MATCH SCORE:", sl_score)
     print("SECOND MATCH SCORE:", second["score"] if second else None)
+    print("MATCH COUNT:", len(matches))
+    print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
 
-    # -------------------------------
-    # STEP 0.2: Decision logic
-    # -------------------------------
-    use_sl_as_context = False   # ✅ ALWAYS initialize
-    sl_context = None           # ✅ ALWAYS initialize
+    # -------------------------
+    # STEP 0.2: Decision logic 
+    # -------------------------
+    use_sl_as_context = False
+    sl_context = None
 
     if sl_found and sl_score is not None:
 
-        # 🟢 STRONG → reuse
-        if sl_score >= 0.80 and (second is None or (sl_score - second["score"]) >= 0.05):
-            return {
-                "source": "SL",
-                "score": sl_score,
-                "answer": sl_answer
-            }
+        # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
+        if sl_score >= 0.60:
 
-        # 🟡 MEDIUM → use multiple
-        elif sl_score >= 0.60:
-            selected_matches = [m for m in matches if m["score"] >= 0.60][:3]
+            selected_matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:3]
 
             sl_context = "\n\n".join([
                 f"Previous QnA (score {round(m['score'],2)}):\n"
                 f"Q: {m.get('question','')}\n"
-                f"A: {m['answer']}"
+                f"A: {(m['answer'][:300].rsplit(' ', 1)[0] + '...') if len(m['answer']) > 300 else m['answer']}"
                 for m in selected_matches
             ])
 
@@ -780,6 +771,7 @@ def ask_question(request: QuestionRequest):
     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
 
     if use_sl_as_context and sl_context:
+
         context = (
             "Relevant past learned answers (use as base, refine and synthesize):\n"
             f"{sl_context}\n\n"
@@ -1197,7 +1189,7 @@ def qna_sl_search(request: QnaSearchRequest):
         }
 
     # NEW CODE STARTS HERE
-    TOP_K = 3
+    TOP_K = 2
     matches = results.matches[:TOP_K]
 
     return {
