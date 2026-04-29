@@ -893,7 +893,10 @@ def qna_gemini(request: QuestionRequest):
     # -------------------------------
     # STEP 8: GENERATE ANSWER
     # -------------------------------
-    answer = generate_answer_gemini(request.question, context)
+    # answer = generate_answer_gemini(request.question, context)
+    
+    print("MODEL USED: GPT (NO SL)")
+    answer = generate_answer(request.question, context)
 
     # -------------------------------
     # STEP 9: STORE ANSWER
@@ -1189,7 +1192,7 @@ def qna_sl_search(request: QnaSearchRequest):
         }
 
     # NEW CODE STARTS HERE
-    TOP_K = 2
+    TOP_K = 3
     matches = results.matches[:TOP_K]
 
     return {
