@@ -54,16 +54,26 @@ def query_embeddings(query_embedding, top_k=5):
 
 
 def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=3):
+
+    print("🔍 QUERY FILTER INPUT:", user_id, profile_id, chart_id)
+
     results = index.query(
         vector=query_embedding,
         top_k=top_k,
         include_metadata=True,
         filter={
-            "user_id": user_id,
-            "profile_id": profile_id,
-            "chart_id": chart_id
+            "user_id": str(user_id),
+            "profile_id": str(profile_id),
+            "chart_id": str(chart_id)
         }
     )
+
+    print("RESULT COUNT:", len(results.matches))
+
+    # Optional: print first result for inspection
+    if results.matches:
+        print("SAMPLE MATCH:", results.matches[0].metadata)
+
     return results
 
 

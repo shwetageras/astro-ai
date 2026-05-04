@@ -26,11 +26,9 @@ from vector_db import query_kb_embeddings_filtered
 from dotenv import load_dotenv
 # import google.generativeai as genai
 from db import insert_qna_sl
-from vector_db import query_kb_embeddings_filtered
 from kb_builder import client
 from prompts import build_prompt
 from db import update_qna_sl_validation, get_qna_sl
-from vector_db import upsert_embeddings
 from typing import Optional
 from db import mark_qna_ml_ready
 from pydantic import BaseModel
@@ -121,7 +119,10 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
             raise Exception(f"Unsupported file type: {file_ext}")
 
         chunks = chunk_text(text)
+        print("✅ CHUNKS:", len(chunks))
+
         embeddings = create_embeddings(chunks)
+        print("✅ EMBEDDINGS:", len(embeddings))
 
         # Add metadata (IMPORTANT)
         upsert_embeddings(
@@ -129,11 +130,13 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
             chunks,
             embeddings,
             metadata={
-                "chart_id": chart_id,
-                "user_id": user_id,
-                "profile_id": profile_id
+                "chart_id": str(chart_id),
+                "user_id": str(user_id),
+                "profile_id": str(profile_id)
             }
         )
+
+        print("✅ UPSERT DONE")
 
         kb = build_kb(chunks, embeddings)
         save_kb(kb, file_id)
@@ -311,9 +314,11 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
 
         # Step 1: Chunk
         chunks = chunk_text(content)
+        print("✅ CHUNKS:", len(chunks))
 
         # Step 2: Embeddings
         embeddings = create_embeddings(chunks)
+        print("✅ EMBEDDINGS:", len(embeddings))
 
         # Step 3: Store in Pinecone
         upsert_embeddings(
@@ -321,11 +326,13 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
             chunks,
             embeddings,
             metadata={
-                "user_id": user_id,
-                "profile_id": profile_id,
-                "chart_id": chart_id   
+                "chart_id": str(chart_id),
+                "user_id": str(user_id),
+                "profile_id": str(profile_id)
             }
         )
+
+        print("✅ UPSERT DONE")
 
         # Step 4: Build KB (IMPORTANT)
         kb = build_kb(chunks, embeddings)
