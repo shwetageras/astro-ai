@@ -98,36 +98,100 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
 
 
 # BACKGROUND FUNCTION FOR upload_chart
+# def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
+    
+#     print("🚀 PROCESS_CHART STARTED", flush=True)
+
+#     try:
+#         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
+
+#         with open(temp_file_path, "wb") as f:
+#             f.write(file_bytes)
+
+#         # SAME pipeline as PDF
+#         file_ext = file_name.split(".")[-1].lower()
+
+#         if file_ext == "pdf":
+#             text = read_pdf(temp_file_path)
+
+#         elif file_ext in ["md", "txt"]:
+#             from kb_builder import read_text_file
+#             text = read_text_file(temp_file_path)
+
+#         else:
+#             raise Exception(f"Unsupported file type: {file_ext}")
+
+#         chunks = chunk_text(text)
+#         print("✅ CHUNKS:", len(chunks))
+
+#         embeddings = create_embeddings(chunks)
+#         print("✅ EMBEDDINGS:", len(embeddings))
+
+#         # Add metadata (IMPORTANT)
+#         upsert_embeddings(
+#             file_id,
+#             chunks,
+#             embeddings,
+#             metadata={
+#                 "chart_id": str(chart_id),
+#                 "user_id": str(user_id),
+#                 "profile_id": str(profile_id)
+#             }
+#         )
+
+#         print("✅ UPSERT DONE")
+
+#         kb = build_kb(chunks, embeddings)
+#         save_kb(kb, file_id)
+
+#         save_metadata(file_id, file_name, int(time.time()))
+
+#         # Update DB
+#         update_chart_job(job_id, "completed", int(time.time()))
+
+#         # 🔥 CALLBACK
+#         notify_chart_status(job_id, chart_id, file_id)
+
+#     except Exception as e:
+#         print(f"Error in chart job {job_id}: {e}")
+#         update_chart_job(job_id, "failed", int(time.time()), str(e))
+
+#     finally:
+#         if os.path.exists(temp_file_path):
+#             os.remove(temp_file_path)
+
 def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
-    
+
     print("🚀 PROCESS_CHART STARTED", flush=True)
-    
+
     try:
         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
+        print("📁 FILE SAVING START")
 
         with open(temp_file_path, "wb") as f:
             f.write(file_bytes)
 
-        # SAME pipeline as PDF
+        print("📁 FILE SAVED")
+
         file_ext = file_name.split(".")[-1].lower()
+        print("📄 FILE TYPE:", file_ext)
 
         if file_ext == "pdf":
             text = read_pdf(temp_file_path)
-
         elif file_ext in ["md", "txt"]:
             from kb_builder import read_text_file
             text = read_text_file(temp_file_path)
-
         else:
             raise Exception(f"Unsupported file type: {file_ext}")
 
+        print("📄 TEXT EXTRACTED")
+
         chunks = chunk_text(text)
-        print("✅ CHUNKS:", len(chunks))
+        print("✂️ CHUNKS:", len(chunks))
 
         embeddings = create_embeddings(chunks)
-        print("✅ EMBEDDINGS:", len(embeddings))
+        print("🧠 EMBEDDINGS:", len(embeddings))
 
-        # Add metadata (IMPORTANT)
         upsert_embeddings(
             file_id,
             chunks,
@@ -139,22 +203,23 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
             }
         )
 
-        print("✅ UPSERT DONE")
+        print("📦 UPSERT DONE")
 
         kb = build_kb(chunks, embeddings)
         save_kb(kb, file_id)
+        print("💾 KB SAVED")
 
         save_metadata(file_id, file_name, int(time.time()))
+        print("🗂 METADATA SAVED")
 
-        # Update DB
         update_chart_job(job_id, "completed", int(time.time()))
+        print("✅ DB UPDATED")
 
-        # 🔥 CALLBACK
         notify_chart_status(job_id, chart_id, file_id)
+        print("📡 CALLBACK SENT")
 
     except Exception as e:
-        print(f"Error in chart job {job_id}: {e}")
-        update_chart_job(job_id, "failed", int(time.time()), str(e))
+        print(f"❌ ERROR in chart job {job_id}: {e}")
 
     finally:
         if os.path.exists(temp_file_path):
@@ -310,20 +375,69 @@ def process_text(text, file_id, file_name, job_id, timestamp):
         update_job(job_id, "failed", int(time.time()), str(e))
 
 
+# def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
+
+#     print("PROCESS_CHART STARTED", flush=True)
+
+#     try:
+#         print("PROCESS START:", job_id)
+
+#         # Step 1: Chunk
+#         chunks = chunk_text(content)
+#         print("✅ CHUNKS:", len(chunks))
+
+#         # Step 2: Embeddings
+#         embeddings = create_embeddings(chunks)
+#         print("✅ EMBEDDINGS:", len(embeddings))
+
+#         # Step 3: Store in Pinecone
+#         upsert_embeddings(
+#             file_id,
+#             chunks,
+#             embeddings,
+#             metadata={
+#                 "chart_id": str(chart_id),
+#                 "user_id": str(user_id),
+#                 "profile_id": str(profile_id)
+#             }
+#         )
+
+#         print("✅ UPSERT DONE")
+
+#         # Step 4: Build KB (IMPORTANT)
+#         kb = build_kb(chunks, embeddings)
+#         save_kb(kb, file_id)
+
+#         # Step 5: Save metadata
+#         save_metadata(file_id, "chart_text", int(time.time()))
+
+#         # Step 6: Update correct DB
+#         update_chart_job(job_id, "completed", int(time.time()))
+
+#         # Step 7: Notify UI
+#         notify_chart_status(job_id, chart_id, file_id)
+
+#         print("PROCESS COMPLETE:", job_id)
+
+#     except Exception as e:
+#         print("❌ ERROR:", str(e))
+#         update_chart_job(job_id, "failed", int(time.time()), str(e))
+
+
 def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
 
-    print("🚀 PROCESS_CHART STARTED", flush=True)
+    print("🚀 PROCESS_CHART_TEXT STARTED", flush=True)
 
     try:
-        print("PROCESS START:", job_id)
+        print("📝 CONTENT RECEIVED")
 
         # Step 1: Chunk
         chunks = chunk_text(content)
-        print("✅ CHUNKS:", len(chunks))
+        print("✂️ CHUNKS:", len(chunks))
 
         # Step 2: Embeddings
         embeddings = create_embeddings(chunks)
-        print("✅ EMBEDDINGS:", len(embeddings))
+        print("🧠 EMBEDDINGS:", len(embeddings))
 
         # Step 3: Store in Pinecone
         upsert_embeddings(
@@ -331,31 +445,34 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
             chunks,
             embeddings,
             metadata={
-                "chart_id": str(chart_id),
                 "user_id": str(user_id),
-                "profile_id": str(profile_id)
+                "profile_id": str(profile_id),
+                "chart_id": str(chart_id)
             }
         )
+        print("📦 UPSERT DONE")
 
-        print("✅ UPSERT DONE")
-
-        # Step 4: Build KB (IMPORTANT)
+        # Step 4: Build KB
         kb = build_kb(chunks, embeddings)
         save_kb(kb, file_id)
+        print("💾 KB SAVED")
 
-        # Step 5: Save metadata
+        # Step 5: Metadata
         save_metadata(file_id, "chart_text", int(time.time()))
+        print("🗂 METADATA SAVED")
 
-        # Step 6: Update correct DB
+        # Step 6: DB update
         update_chart_job(job_id, "completed", int(time.time()))
+        print("✅ DB UPDATED")
 
-        # Step 7: Notify UI
+        # Step 7: Callback
         notify_chart_status(job_id, chart_id, file_id)
+        print("📡 CALLBACK SENT")
 
-        print("PROCESS COMPLETE:", job_id)
+        print("🎉 PROCESS COMPLETE:", job_id)
 
     except Exception as e:
-        print("❌ ERROR:", str(e))
+        print(f"❌ ERROR in chart text job {job_id}: {e}")
         update_chart_job(job_id, "failed", int(time.time()), str(e))
 
 
