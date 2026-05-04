@@ -99,6 +99,9 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
 
 # BACKGROUND FUNCTION FOR upload_chart
 def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
+    
+    print("🚀 PROCESS_CHART STARTED", flush=True)
+    
     try:
         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
 
@@ -308,6 +311,8 @@ def process_text(text, file_id, file_name, job_id, timestamp):
 
 
 def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
+
+    print("🚀 PROCESS_CHART STARTED", flush=True)
 
     try:
         print("PROCESS START:", job_id)
