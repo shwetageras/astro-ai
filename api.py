@@ -166,15 +166,15 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
     try:
         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
-        print("📁 FILE SAVING START")
+        print("FILE SAVING START")
 
         with open(temp_file_path, "wb") as f:
             f.write(file_bytes)
 
-        print("📁 FILE SAVED")
+        print("FILE SAVED")
 
         file_ext = file_name.split(".")[-1].lower()
-        print("📄 FILE TYPE:", file_ext)
+        print("FILE TYPE:", file_ext)
 
         if file_ext == "pdf":
             text = read_pdf(temp_file_path)
@@ -184,13 +184,13 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
         else:
             raise Exception(f"Unsupported file type: {file_ext}")
 
-        print("📄 TEXT EXTRACTED")
+        print("TEXT EXTRACTED")
 
         chunks = chunk_text(text)
-        print("✂️ CHUNKS:", len(chunks))
+        print("CHUNKS:", len(chunks))
 
         embeddings = create_embeddings(chunks)
-        print("🧠 EMBEDDINGS:", len(embeddings))
+        print("EMBEDDINGS:", len(embeddings))
 
         upsert_embeddings(
             file_id,
@@ -203,20 +203,20 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
             }
         )
 
-        print("📦 UPSERT DONE")
+        print("UPSERT DONE")
 
         kb = build_kb(chunks, embeddings)
         save_kb(kb, file_id)
-        print("💾 KB SAVED")
+        print("KB SAVED")
 
         save_metadata(file_id, file_name, int(time.time()))
-        print("🗂 METADATA SAVED")
+        print("METADATA SAVED")
 
         update_chart_job(job_id, "completed", int(time.time()))
-        print("✅ DB UPDATED")
+        print("DB UPDATED")
 
         notify_chart_status(job_id, chart_id, file_id)
-        print("📡 CALLBACK SENT")
+        print("CALLBACK SENT")
 
     except Exception as e:
         print(f"❌ ERROR in chart job {job_id}: {e}")
@@ -426,18 +426,18 @@ def process_text(text, file_id, file_name, job_id, timestamp):
 
 def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
 
-    print("🚀 PROCESS_CHART_TEXT STARTED", flush=True)
+    print("PROCESS_CHART_TEXT STARTED", flush=True)
 
     try:
-        print("📝 CONTENT RECEIVED")
+        print("CONTENT RECEIVED")
 
         # Step 1: Chunk
         chunks = chunk_text(content)
-        print("✂️ CHUNKS:", len(chunks))
+        print("CHUNKS:", len(chunks))
 
         # Step 2: Embeddings
         embeddings = create_embeddings(chunks)
-        print("🧠 EMBEDDINGS:", len(embeddings))
+        print("EMBEDDINGS:", len(embeddings))
 
         # Step 3: Store in Pinecone
         upsert_embeddings(
@@ -450,26 +450,26 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
                 "chart_id": str(chart_id)
             }
         )
-        print("📦 UPSERT DONE")
+        print("UPSERT DONE")
 
         # Step 4: Build KB
         kb = build_kb(chunks, embeddings)
         save_kb(kb, file_id)
-        print("💾 KB SAVED")
+        print("KB SAVED")
 
         # Step 5: Metadata
         save_metadata(file_id, "chart_text", int(time.time()))
-        print("🗂 METADATA SAVED")
+        print("METADATA SAVED")
 
         # Step 6: DB update
         update_chart_job(job_id, "completed", int(time.time()))
-        print("✅ DB UPDATED")
+        print("DB UPDATED")
 
         # Step 7: Callback
         notify_chart_status(job_id, chart_id, file_id)
-        print("📡 CALLBACK SENT")
+        print("CALLBACK SENT")
 
-        print("🎉 PROCESS COMPLETE:", job_id)
+        print("PROCESS COMPLETE:", job_id)
 
     except Exception as e:
         print(f"❌ ERROR in chart text job {job_id}: {e}")
@@ -1230,6 +1230,9 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     )
     embedding = response.data[0].embedding
 
+    print("KB_ID SAVED:", record["kb_id"])
+    print("QUESTION SAVED:", record["question"])
+
     # -------------------------------
     # STEP 5: STORE IN VECTOR DB
     # -------------------------------
@@ -1239,7 +1242,7 @@ def qna_sl_validation(request: QnaSLValidationRequest):
         embeddings=[embedding],
         metadata={
             "type": "qna_sl",
-            "kb_id": record["kb_id"],
+            "kb_id": str(record["kb_id"]).strip(),
             "question": record["question"],
             "answer": final_answer
         }

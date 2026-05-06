@@ -106,6 +106,11 @@ def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=5):
 
 
 def query_qna_sl_embeddings(query_embedding, kb_id, top_k=3):
+    
+    kb_id = str(kb_id).strip()
+
+    print("SEARCHING KB_ID:", kb_id)
+    
     results = index.query(
         vector=query_embedding,
         top_k=top_k,
