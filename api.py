@@ -769,12 +769,26 @@ def ask_question(request: QuestionRequest):
 
             selected_matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:3]
 
-            sl_context = "\n\n".join([
-                f"Previous QnA (score {round(m['score'],2)}):\n"
-                f"Q: {m.get('question','')}\n"
-                f"A: {(m['answer'][:300].rsplit(' ', 1)[0] + '...') if len(m['answer']) > 300 else m['answer']}"
-                for m in selected_matches
-            ])
+            formatted_matches = []
+
+            for m in selected_matches:
+
+                answer = m.get("answer") or ""
+                question = m.get("question") or ""
+
+                short_answer = (
+                    answer[:300].rsplit(' ', 1)[0] + "..."
+                    if len(answer) > 300
+                    else answer
+                )
+
+                formatted_matches.append(
+                    f"Previous QnA (score {round(m['score'],2)}):\n"
+                    f"Q: {question}\n"
+                    f"A: {short_answer}"
+                )
+
+            sl_context = "\n\n".join(formatted_matches)
 
             use_sl_as_context = True
 
