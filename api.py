@@ -767,12 +767,10 @@ def ask_question(request: QuestionRequest):
         # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
         if sl_score >= 0.60:
 
-            selected_matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:3]
-
             selected_matches = [
-                m for m in selected_matches
-                if m.get("answer")
-            ]
+                m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
+                if m["score"] >= 0.60 and m.get("answer")
+            ][:3]
 
             formatted_matches = []
 
