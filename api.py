@@ -769,6 +769,11 @@ def ask_question(request: QuestionRequest):
 
             selected_matches = sorted(matches, key=lambda x: x["score"], reverse=True)[:3]
 
+            selected_matches = [
+                m for m in selected_matches
+                if m.get("answer")
+            ]
+
             formatted_matches = []
 
             for m in selected_matches:
