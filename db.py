@@ -361,3 +361,25 @@ def insert_generated_qna(kb_id, question, answer):
     conn.close()
 
     return row[0]
+
+
+def get_file_id_from_job(job_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT file_id
+        FROM jobs
+        WHERE job_id = %s
+    """, (job_id,))
+
+    row = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if row:
+        return row[0]
+
+    return None

@@ -4,15 +4,26 @@ from kb_builder import client
 from vector_db import get_all_kb_chunks
 from prompts import build_qna_generation_prompt
 from db import insert_generated_qna
+from db import get_file_id_from_job
 
 def generate_qnas(kb_id):
 
-    print("GENERATING QNAS FOR:", kb_id)
+    print("GENERATING QNAS FOR JOB:", kb_id)
+
+    # -----------------------------------
+    # STEP 0: CONVERT JOB_ID → FILE_ID
+    # -----------------------------------
+    file_id = get_file_id_from_job(kb_id)
+
+    if not file_id:
+        raise Exception("Invalid job_id")
+
+    print("FILE ID:", file_id)
 
     # -----------------------------------
     # STEP 1: RETRIEVE KB CHUNKS
     # -----------------------------------
-    results = get_all_kb_chunks(kb_id)
+    results = get_all_kb_chunks(file_id)
 
     print("TOTAL MATCHES:", len(results.matches))
 
@@ -84,7 +95,7 @@ def generate_qnas(kb_id):
     for item in parsed["qnas"]:
 
         qna_id = insert_generated_qna(
-            kb_id,
+            file_id,
             item["question"],
             item["answer"]
         )
