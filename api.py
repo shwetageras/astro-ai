@@ -33,6 +33,7 @@ from typing import Optional
 from db import mark_qna_ml_ready
 from pydantic import BaseModel
 from vector_db import query_qna_sl_embeddings
+from qna_generator import generate_qnas
 
 
 # load_dotenv()
@@ -515,6 +516,9 @@ class QnaSearchRequest(BaseModel):
     question: str
     kb_id: str
 
+
+class QnaGenerateRequest(BaseModel):
+    kb_id: str
 
 # Create API → /upload_kb
 @app.post("/upload_kb")
@@ -1354,4 +1358,15 @@ def qna_sl_search(request: QnaSearchRequest):
             }
             for m in matches
         ]
+    }
+
+@app.post("/qna_generate")
+def qna_generate(request: QnaGenerateRequest):
+
+    qnas = generate_qnas(request.kb_id)
+
+    return {
+        "status": "success",
+        "message": "5 qnas created",
+        "data": qnas
     }
