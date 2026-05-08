@@ -335,3 +335,29 @@ def mark_qna_ml_ready(qna_id):
     conn.commit()
     cursor.close()
     conn.close()
+
+
+def insert_generated_qna(kb_id, question, answer):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO generated_qnas (
+            kb_id,
+            question,
+            answer,
+            created_at
+        )
+        VALUES (%s, %s, %s, EXTRACT(EPOCH FROM NOW())::BIGINT)
+        RETURNING id
+    """, (kb_id, question, answer))
+
+    row = cursor.fetchone()
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return row[0]

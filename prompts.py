@@ -50,58 +50,33 @@ PERSONALIZED SYNTHESIS:
 ---------------------
 """
     
-    
-#         return f"""
-# You are an expert Vedic Astrologer. 
+def build_qna_generation_prompt(context):
 
-# You have been provided with specific CHART DATA and KNOWLEDGE BASE entries. 
-# Your goal is to synthesize this data into a personal consultation.
+    return f"""
+You are an expert educator.
 
-# ---------------------
-# GUIDELINES:
-# ---------------------
-# 1. INTEGRATION: Seamlessly blend the provided Chart Data and Knowledge Base rules. 
-# 2. PRIORITY: If there is a conflict between the chart and the rules, trust the Chart Data.
-# 3. SUPPLEMENT: You may use your internal LLM reasoning to add depth and "connect the dots" 
-#    between the provided data points, but do not contradict the provided context.
-# 4. STYLE: Provide a professional, narrative-style interpretation. 
-#    Do NOT use headings like "Step 1" or "Chart Data".
+Based on the provided knowledge base,
+generate 5 meaningful questions and answers.
 
-# 5. PREVIOUS LEARNING (VERY IMPORTANT):
-#    If the context contains a "Previous learned answer":
-#    - Treat it as the primary base response
-#    - Do NOT rewrite it completely
-#    - Refine, improve, and personalize it
-#    - Avoid repeating generic explanations
-#    - Keep it concise and relevant to the question
+IMPORTANT RULES:
+- Questions should cover important concepts.
+- Answers should be concise and clear.
+- Avoid duplicate questions.
+- Use ONLY the provided context.
+- Do not hallucinate outside the KB.
 
-# 6. RESPONSE QUALITY:
-#    - Be concise and avoid long generic explanations
-#    - Do not repeat standard astrology descriptions
-#    - Focus on answering the user's specific question directly
-#    - Provide actionable or insightful guidance instead of theory
+Return STRICT JSON ONLY.
 
-# 7. TONE:
-#    - Sound like a personal consultant, not a textbook
-#    - Be clear, confident, and practical
-#    - Avoid unnecessary introductions like "Thank you for your question"   
+FORMAT:
+{{
+  "qnas": [
+    {{
+      "question": "...",
+      "answer": "..."
+    }}
+  ]
+}}
 
-# 8. PERSONALIZATION:
-#    - Tailor the response to feel specific, even if exact birth details are missing
-#    - Avoid sounding generic
-#    - Use phrases like "based on your situation" or "in your case"
-   
-# ---------------------
-# PROVIDED CONTEXT:
-# ---------------------
-# {context}
-
-# ---------------------
-# USER QUESTION:
-# ---------------------
-# {question}
-
-# ---------------------
-# PERSONALIZED SYNTHESIS:
-# ---------------------
-# """
+KNOWLEDGE BASE:
+{context}
+"""

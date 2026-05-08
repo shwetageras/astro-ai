@@ -121,3 +121,33 @@ def query_qna_sl_embeddings(query_embedding, kb_id, top_k=3):
         }
     )
     return results
+
+# def get_all_kb_chunks(kb_id, top_k=100):
+
+#     results = index.query(
+#         vector=[0.0] * 1536,
+#         top_k=top_k,
+#         include_metadata=True,
+#         filter={
+#             "file_id": kb_id
+#         }
+#     )
+
+#     return results
+
+def get_all_kb_chunks(kb_id, top_k=100):
+
+    print("FILTER KB_ID:", kb_id)
+
+    results = index.query(
+        vector=[0.0] * 1536,
+        top_k=top_k,
+        include_metadata=True,
+        filter={
+            "file_id": kb_id
+        }
+    )
+
+    print("MATCHES FOUND:", len(results.matches))
+
+    return results
