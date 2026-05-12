@@ -25,14 +25,14 @@ def generate_qnas(kb_id):
     # -----------------------------------
     results = get_all_kb_chunks(file_id)
 
-    print("TOTAL MATCHES:", len(results.matches))
+    print("TOTAL MATCHES:", len(results))
 
     # -----------------------------------
     # STEP 2: BUILD CONTEXT
     # -----------------------------------
     context = ""
 
-    for match in results.matches:
+    for match in results:
         text = match.metadata.get("text", "")
         context += text + "\n"
 

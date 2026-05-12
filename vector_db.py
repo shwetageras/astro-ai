@@ -135,7 +135,7 @@ def query_qna_sl_embeddings(query_embedding, kb_id, top_k=3):
 
 #     return results
 
-def get_all_kb_chunks(kb_id, top_k=100):
+def get_all_kb_chunks(kb_id, top_k=1000):
 
     print("FILTER KB_ID:", kb_id)
 
@@ -150,4 +150,4 @@ def get_all_kb_chunks(kb_id, top_k=100):
 
     print("MATCHES FOUND:", len(results.matches))
 
-    return results
+    return results.matches
