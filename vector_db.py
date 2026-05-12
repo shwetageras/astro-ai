@@ -41,8 +41,23 @@ def upsert_embeddings(file_id, chunks, embeddings, metadata=None):
     BATCH_SIZE = 100   # safe starting point (later Dynamic Batching to be implemented)
 
     for i in range(0, len(vectors), BATCH_SIZE):
+
         batch = vectors[i:i + BATCH_SIZE]
-        index.upsert(vectors=batch)
+
+        try:
+            response = index.upsert(vectors=batch)
+
+            print(f"UPSERTED BATCH: {i} to {i + len(batch)}")
+            print("UPSERT RESPONSE:", response)
+
+        except Exception as e:
+            print("PINECONE UPSERT ERROR:")
+            print(str(e))
+
+    stats = index.describe_index_stats()
+
+    print("INDEX STATS:")
+    print(stats)
 
 def query_embeddings(query_embedding, top_k=5):
     results = index.query(
