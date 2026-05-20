@@ -253,47 +253,7 @@ def insert_qna_sl(kb_id, question, llm_answer):
     return qna_id
 
 
-def update_qna_sl_validation(qna_id, is_valid, corrected_answer=None):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # If VALID → use llm_answer as corrected_answer
-    if is_valid is True:
-        cursor.execute("""
-            UPDATE qna_sl_logs
-            SET 
-                is_valid = %s,
-                corrected_answer = llm_answer,
-                tr_sl = TRUE
-            WHERE id = %s
-        """, (is_valid, qna_id))
-
-    # If NOT VALID → use user provided corrected_answer
-    elif is_valid is False:
-        cursor.execute("""
-            UPDATE qna_sl_logs
-            SET 
-                is_valid = %s,
-                corrected_answer = %s,
-                tr_sl = TRUE
-            WHERE id = %s
-        """, (is_valid, corrected_answer, qna_id))
-
-    # If NOT REQUIRED → do nothing to corrected_answer
-    else:
-        cursor.execute("""
-            UPDATE qna_sl_logs
-            SET 
-                is_valid = NULL,
-                tr_sl = TRUE
-            WHERE id = %s
-        """, (qna_id,))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-def process_qna_validation(
+def update_qna_sl_validation(
     table_name,
     qna_id,
     is_valid,
@@ -340,53 +300,13 @@ def process_qna_validation(
             qna_id
         ))
 
-    # -----------------------------
-    # NOT REVIEWED
-    # -----------------------------
-    else:
-
-        cursor.execute(f"""
-            UPDATE {table_name}
-            SET
-                is_valid = NULL,
-                tr_sl = TRUE
-            WHERE id = %s
-        """, (qna_id,))
-
     conn.commit()
 
     cursor.close()
     conn.close()
 
 
-def get_qna_sl(qna_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT kb_id, question, llm_answer, corrected_answer, is_valid
-        FROM qna_sl_logs
-        WHERE id = %s
-    """, (qna_id,))
-
-    row = cursor.fetchone()
-
-    cursor.close()
-    conn.close()
-
-    if row:
-        return {
-            "kb_id": row[0],
-            "question": row[1],
-            "llm_answer": row[2],
-            "corrected_answer": row[3],
-            "is_valid": row[4]
-        }
-
-    return None
-
-
-def get_qna_record(table_name, qna_id):
+def get_qna_sl(table_name, qna_id):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -408,7 +328,6 @@ def get_qna_record(table_name, qna_id):
         return dict(zip(columns, row))
 
     return None
-
 
 
 def mark_qna_ml_ready(qna_id):

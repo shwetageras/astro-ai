@@ -10,7 +10,6 @@ from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_k
 from notifier import notify_embedding_status
 from db import get_chart_details_bulk, soft_delete_chart_job, get_chart_job
 from db import insert_job, get_job, update_job
-from db import get_qna_record, process_qna_validation
 from vector_db import upsert_embeddings
 from vector_db import query_embeddings
 from kb_builder import client
@@ -504,6 +503,7 @@ class QnaSLRequest(BaseModel):
 
 
 class QnaSLValidationRequest(BaseModel):
+    source_type: str
     qna_id: int
     is_valid: bool
     corrected_answer: Optional[str] = None
@@ -520,13 +520,6 @@ class QnaSearchRequest(BaseModel):
 
 class QnaGenerateRequest(BaseModel):
     kb_id: str
-
-
-class QnaValidationRequest(BaseModel):
-    source_type: str
-    qna_id: int
-    is_valid: bool
-    corrected_answer: str | None = None
 
 
 # Create API → /upload_kb
@@ -1219,10 +1212,26 @@ def qna_sl(request: QnaSLRequest):
 @app.post("/qna_sl_validation")
 def qna_sl_validation(request: QnaSLValidationRequest):
 
+    table_map = {
+        "sl": "qna_sl_logs",
+        "generated": "generated_qnas"
+    }
+
+    if request.source_type not in table_map:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid source_type"
+        )
+
+    table_name = table_map[request.source_type]
+
     # -------------------------------
     # STEP 1: FETCH ORIGINAL QNA
     # -------------------------------
-    record = get_qna_sl(request.qna_id)
+    record = get_qna_sl(
+        table_name,
+        request.qna_id
+    )
 
     if not record:
         raise HTTPException(status_code=404, detail="QnA not found")
@@ -1230,23 +1239,34 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     # -------------------------------
     # STEP 2: DECIDE FINAL ANSWER
     # -------------------------------
+    original_answer = (
+        record.get("llm_answer")
+        or record.get("answer")
+    )
+
     if request.is_valid:
-        final_answer = record["llm_answer"]
+
+        final_answer = original_answer
+
     else:
+
         if not request.corrected_answer:
             raise HTTPException(
                 status_code=400,
                 detail="Corrected answer required when invalid"
             )
+
         final_answer = request.corrected_answer
 
     # -------------------------------
     # STEP 3: UPDATE DB
     # -------------------------------
     update_qna_sl_validation(
-        request.qna_id,
-        request.is_valid,
-        request.corrected_answer
+        table_name=table_name,
+        qna_id=request.qna_id,
+        is_valid=request.is_valid,
+        llm_answer=original_answer,
+        corrected_answer=request.corrected_answer
     )
 
     # -------------------------------
@@ -1267,117 +1287,21 @@ def qna_sl_validation(request: QnaSLValidationRequest):
     # STEP 5: STORE IN VECTOR DB
     # -------------------------------
     upsert_embeddings(
-        file_id=f"qna_sl_{request.qna_id}",
+        file_id=f"{request.source_type}_{request.qna_id}",
         chunks=[text],
         embeddings=[embedding],
         metadata={
             "type": "qna_sl",
             "kb_id": str(record["kb_id"]).strip(),
             "question": record["question"],
-            "answer": final_answer
+            "answer": final_answer,
+            "source_type": request.source_type
         }
     )
 
     # -------------------------------
     # STEP 6: RESPONSE
     # -------------------------------
-    return {
-        "status": "validated and learned"
-    }
-
-
-@app.post("/qna_validation")
-def qna_validation(request: QnaValidationRequest):
-
-    # -----------------------------------
-    # STEP 1: DETERMINE SOURCE TABLE
-    # -----------------------------------
-    table_map = {
-        "sl": "qna_sl_logs",
-        "generated": "generated_qnas"
-    }
-
-    if request.source_type not in table_map:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid source_type"
-        )
-
-    table_name = table_map[request.source_type]
-
-    # -----------------------------------
-    # STEP 2: FETCH RECORD
-    # -----------------------------------
-    record = get_qna_record(
-        table_name,
-        request.qna_id
-    )
-
-    if not record:
-        raise HTTPException(
-            status_code=404,
-            detail="QnA not found"
-        )
-
-    # -----------------------------------
-    # STEP 3: FINAL ANSWER LOGIC
-    # -----------------------------------
-    original_answer = (
-        record.get("llm_answer")
-        or record.get("answer")
-    )
-
-    if request.is_valid:
-        final_answer = original_answer
-    else:
-
-        if not request.corrected_answer:
-            raise HTTPException(
-                status_code=400,
-                detail="Corrected answer required"
-            )
-
-        final_answer = request.corrected_answer
-
-    # -----------------------------------
-    # STEP 4: COMMON VALIDATION
-    # -----------------------------------
-    process_qna_validation(
-        table_name=table_name,
-        qna_id=request.qna_id,
-        is_valid=request.is_valid,
-        llm_answer=original_answer,
-        corrected_answer=request.corrected_answer
-    )
-
-    # -----------------------------------
-    # STEP 5: CREATE EMBEDDING
-    # -----------------------------------
-    text = record["question"]
-
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-
-    embedding = response.data[0].embedding
-
-    # -----------------------------------
-    # STEP 6: STORE IN PINECONE
-    # -----------------------------------
-    upsert_embeddings(
-        file_id=f"{request.source_type}_{request.qna_id}",
-        chunks=[text],
-        embeddings=[embedding],
-        metadata={
-            "type": "qna_sl",
-            "kb_id": record["kb_id"],
-            "question": record["question"],
-            "answer": final_answer,
-            "source_type": request.source_type
-        }
-    )
-
     return {
         "status": "validated and learned"
     }
@@ -1390,7 +1314,10 @@ def qna_ml_submit(request: QnaMLRequest):
 
     for qna_id in request.qna_ids:
 
-        record = get_qna_sl(qna_id)
+        record = get_qna_sl(
+            "qna_sl_logs",
+            qna_id
+        )
 
         if not record:
             results.append({
