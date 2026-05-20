@@ -293,6 +293,71 @@ def update_qna_sl_validation(qna_id, is_valid, corrected_answer=None):
     cursor.close()
     conn.close()
 
+def process_qna_validation(
+    table_name,
+    qna_id,
+    is_valid,
+    llm_answer=None,
+    corrected_answer=None
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # -----------------------------
+    # VALID ANSWER
+    # -----------------------------
+    if is_valid is True:
+
+        cursor.execute(f"""
+            UPDATE {table_name}
+            SET
+                is_valid = %s,
+                corrected_answer = %s,
+                tr_sl = TRUE
+            WHERE id = %s
+        """, (
+            is_valid,
+            llm_answer,
+            qna_id
+        ))
+
+    # -----------------------------
+    # INVALID ANSWER
+    # -----------------------------
+    elif is_valid is False:
+
+        cursor.execute(f"""
+            UPDATE {table_name}
+            SET
+                is_valid = %s,
+                corrected_answer = %s,
+                tr_sl = TRUE
+            WHERE id = %s
+        """, (
+            is_valid,
+            corrected_answer,
+            qna_id
+        ))
+
+    # -----------------------------
+    # NOT REVIEWED
+    # -----------------------------
+    else:
+
+        cursor.execute(f"""
+            UPDATE {table_name}
+            SET
+                is_valid = NULL,
+                tr_sl = TRUE
+            WHERE id = %s
+        """, (qna_id,))
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
 
 def get_qna_sl(qna_id):
     conn = get_connection()
@@ -317,6 +382,30 @@ def get_qna_sl(qna_id):
             "corrected_answer": row[3],
             "is_valid": row[4]
         }
+
+    return None
+
+
+def get_qna_record(table_name, qna_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(f"""
+        SELECT *
+        FROM {table_name}
+        WHERE id = %s
+    """, (qna_id,))
+
+    row = cursor.fetchone()
+
+    columns = [desc[0] for desc in cursor.description]
+
+    cursor.close()
+    conn.close()
+
+    if row:
+        return dict(zip(columns, row))
 
     return None
 
