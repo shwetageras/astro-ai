@@ -95,7 +95,7 @@ def generate_qnas(kb_id):
     for item in parsed["qnas"]:
 
         qna_id = insert_generated_qna(
-            file_id,
+            kb_id,
             item["question"],
             item["answer"]
         )
