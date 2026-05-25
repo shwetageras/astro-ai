@@ -166,3 +166,20 @@ def get_all_kb_chunks(kb_id, top_k=1000):
     print("MATCHES FOUND:", len(results.matches))
 
     return results.matches
+
+
+def delete_qna_embeddings(source_type, qna_id):
+
+    vector_id = f"{source_type}_{qna_id}_0"
+
+    try:
+
+        print("🧹 DELETING QNA VECTOR:", vector_id)
+
+        index.delete(ids=[vector_id])
+
+        print("✅ QNA VECTOR DELETED")
+
+    except Exception as e:
+
+        print(f"⚠️ VECTOR DELETE ERROR: {e}")

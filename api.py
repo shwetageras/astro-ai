@@ -1,4 +1,5 @@
 import time
+import uuid
 import os
 import json
 import requests
@@ -34,7 +35,8 @@ from db import mark_qna_ml_ready
 from pydantic import BaseModel
 from vector_db import query_qna_sl_embeddings
 from qna_generator import generate_qnas
-
+from db import delete_qna_record
+from vector_db import delete_qna_embeddings
 
 # load_dotenv()
 
@@ -522,6 +524,10 @@ class QnaGenerateRequest(BaseModel):
     kb_id: str
 
 
+class DeleteQnaSLRequest(BaseModel):
+    source_type: str
+    qna_id: int
+
 # Create API → /upload_kb
 @app.post("/upload_kb")
 async def upload_kb(
@@ -537,7 +543,8 @@ async def upload_kb(
 
     safe_name = make_safe_filename(name)
     file_id = f"{timestamp}_{safe_name}"
-    job_id = f"job_{timestamp}"
+    
+    job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
 
     # 🔥 CASE 1: TEXT INPUT
     if isKbtype == "article":
@@ -638,16 +645,17 @@ async def upload_chart(
     file: UploadFile = File(None)
 ):
 
-    import time
 
     timestamp = int(time.time())
 
     safe_name = make_safe_filename("chart")
-    file_id = f"{timestamp}_{safe_name}"
-    job_id = f"job_{timestamp}"
+    file_id = f"{timestamp}_{uuid.uuid4().hex}_{safe_name}"
+
+    job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
 
     insert_chart_job(
         job_id,
+        file_id,
         chart_id,
         user_id,
         profile_id,
@@ -1126,13 +1134,29 @@ def delete_chart(request: DeleteChartRequest):
             detail="Cannot delete while processing"
         )
 
+    file_id = chart_job["file_id"]
+
+    if not file_id:
+        raise HTTPException(
+            status_code=400,
+            detail="file_id missing for this chart job"
+        )    
+
+    print("🧾 DELETE CHART JOB:", chart_job)
+    print("📁 FILE_ID:", file_id)
+
     try:
         # 2. Delete embeddings
-        delete_embeddings(job_id)
+        print(f"🧹 Deleting embeddings for file_id: {file_id}")
+        delete_embeddings(file_id)
+        print(f"✅ Embeddings deleted for file_id: {file_id}")
 
-        # 3. Delete file from S3
+        # 3. Delete files from S3
         from storage import delete_file
-        delete_file(job_id)
+
+        delete_file(file_id)
+
+        print(f"✅ S3 cleanup completed for file_id: {file_id}")
 
     except Exception as e:
         print(f"⚠️ Delete error: {e}")
@@ -1402,4 +1426,67 @@ def qna_generate(request: QnaGenerateRequest):
         "status": "success",
         "message": "5 qnas created",
         "data": qnas
+    }
+
+
+@app.post("/delete_qna_sl")
+def delete_qna_sl(request: DeleteQnaSLRequest):
+
+    table_map = {
+        "sl": "qna_sl_logs",
+        "generated": "generated_qnas"
+    }
+
+    if request.source_type not in table_map:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid source_type"
+        )
+
+    table_name = table_map[request.source_type]
+
+    # -------------------------------
+    # STEP 1: FETCH RECORD
+    # -------------------------------
+    record = get_qna_sl(
+        table_name,
+        request.qna_id
+    )
+
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail="QnA not found"
+        )
+
+    try:
+
+        # -------------------------------
+        # STEP 2: DELETE EMBEDDINGS
+        # -------------------------------
+        delete_qna_embeddings(
+            request.source_type,
+            request.qna_id
+        )
+
+        # -------------------------------
+        # STEP 3: DELETE DB RECORD
+        # -------------------------------
+        delete_qna_record(
+            table_name,
+            request.qna_id
+        )
+
+    except Exception as e:
+
+        print(f"⚠️ QnA delete error: {e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete QnA"
+        )
+
+    return {
+        "status": "success",
+        "message": "QnA deleted successfully"
     }

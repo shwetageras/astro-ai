@@ -71,16 +71,41 @@ def update_job(job_id, status, completed_at=None, error=None):
 # CHART JOB FUNCTIONS
 # -------------------------------
 
-def insert_chart_job(job_id, chart_id, user_id, profile_id, file_name, status, created_at):
+def insert_chart_job(
+    job_id,
+    file_id,
+    chart_id,
+    user_id,
+    profile_id,
+    file_name,
+    status,
+    created_at
+):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         INSERT INTO charts_jobs (
-            job_id, chart_id, user_id, profile_id, file_name, status, created_at
+            job_id,
+            file_id,
+            chart_id,
+            user_id,
+            profile_id,
+            file_name,
+            status,
+            created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (job_id, chart_id, user_id, profile_id, file_name, status, created_at))
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        job_id,
+        file_id,
+        chart_id,
+        user_id,
+        profile_id,
+        file_name,
+        status,
+        created_at
+    ))
 
     conn.commit()
     cursor.close()
@@ -92,7 +117,7 @@ def get_chart_job(job_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT job_id, chart_id, user_id, profile_id, file_name, status, created_at, completed_at, error
+        SELECT job_id, file_id, chart_id, user_id, profile_id, file_name, status, created_at, completed_at, error
         FROM charts_jobs
         WHERE job_id = %s
     """, (job_id,))
@@ -105,14 +130,15 @@ def get_chart_job(job_id):
     if row:
         return {
             "job_id": row[0],
-            "chart_id": row[1],
-            "user_id": row[2],
-            "profile_id": row[3],
-            "file_name": row[4],
-            "status": row[5],
-            "created_at": row[6],
-            "completed_at": row[7],
-            "error": row[8]
+            "file_id": row[1],
+            "chart_id": row[2],
+            "user_id": row[3],
+            "profile_id": row[4],
+            "file_name": row[5],
+            "status": row[6],
+            "created_at": row[7],
+            "completed_at": row[8],
+            "error": row[9]
         }
 
     return None
@@ -391,3 +417,19 @@ def get_file_id_from_job(job_id):
         return row[0]
 
     return None
+
+
+def delete_qna_record(table_name, qna_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(f"""
+        DELETE FROM {table_name}
+        WHERE id = %s
+    """, (qna_id,))
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
