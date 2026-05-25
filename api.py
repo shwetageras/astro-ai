@@ -525,7 +525,6 @@ class QnaGenerateRequest(BaseModel):
 
 
 class DeleteQnaSLRequest(BaseModel):
-    source_type: str
     qna_id: int
 
 # Create API → /upload_kb
