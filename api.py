@@ -1431,25 +1431,14 @@ def qna_generate(request: QnaGenerateRequest):
 @app.post("/delete_qna_sl")
 def delete_qna_sl(request: DeleteQnaSLRequest):
 
-    table_map = {
-        "sl": "qna_sl_logs",
-        "generated": "generated_qnas"
-    }
-
-    if request.source_type not in table_map:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid source_type"
-        )
-
-    table_name = table_map[request.source_type]
+    qna_id = request.qna_id
 
     # -------------------------------
     # STEP 1: FETCH RECORD
     # -------------------------------
     record = get_qna_sl(
-        table_name,
-        request.qna_id
+        "generated_qnas",
+        qna_id
     )
 
     if not record:
@@ -1464,16 +1453,16 @@ def delete_qna_sl(request: DeleteQnaSLRequest):
         # STEP 2: DELETE EMBEDDINGS
         # -------------------------------
         delete_qna_embeddings(
-            request.source_type,
-            request.qna_id
+            "generated",
+            qna_id
         )
 
         # -------------------------------
         # STEP 3: DELETE DB RECORD
         # -------------------------------
         delete_qna_record(
-            table_name,
-            request.qna_id
+            "generated_qnas",
+            qna_id
         )
 
     except Exception as e:
