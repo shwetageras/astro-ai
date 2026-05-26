@@ -316,6 +316,8 @@ def generate_answer(question, context):
     
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
+        temperature=0.7,
+        max_tokens=220,
         messages=[
             {"role": "system", "content": "You are a careful and reasoning-based astrologer."},
             {"role": "user", "content": prompt}
@@ -1206,6 +1208,8 @@ def qna_sl(request: QnaSLRequest):
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
+        temperature=0.7,
+        max_tokens=220,
         messages=[
             {"role": "system", "content": "You are a careful domain expert."},
             {"role": "user", "content": prompt}
