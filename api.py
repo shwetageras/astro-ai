@@ -309,15 +309,30 @@ def build_context(chart_results, kb_results):
 
     return context[:3000]
 
+def get_max_tokens(question):
+
+    q = question.lower()
+
+    # Detailed analysis requests
+    if any(word in q for word in [
+        "detailed", "deep", "analyze", "complete", "full"
+    ]):
+        return 450
+
+    # Default conversational mode
+    return 220
+
 
 def generate_answer(question, context):
 
     prompt = build_prompt(question, context)
     
+    max_tokens_value = get_max_tokens(question)
+
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
         temperature=0.7,
-        max_tokens=220,
+        max_tokens=max_tokens_value,
         messages=[
             {"role": "system", "content": "You are a careful and reasoning-based astrologer."},
             {"role": "user", "content": prompt}
