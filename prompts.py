@@ -51,6 +51,8 @@ Do not invent chart details that are not present in the provided context.
 Focus on meaningful insight rather than explaining everything.
 
 Avoid repeating the same style, sentence patterns, or advice in every response.
+
+Do not overload responses with too many planetary placements or astrological technicalities unless the user specifically asks for detailed analysis.
 """
 
     # ---------------- PURE LLM MODE ----------------
