@@ -22,7 +22,7 @@ from db import insert_qna, update_qna_answer
 from fastapi import HTTPException
 from vector_db import delete_embeddings
 from prompts import build_prompt
-from typing import List
+from typing import List, Optional
 from vector_db import query_kb_embeddings_filtered
 from dotenv import load_dotenv
 # import google.generativeai as genai
@@ -30,7 +30,6 @@ from db import insert_qna_sl
 from kb_builder import client
 from prompts import build_prompt
 from db import update_qna_sl_validation, get_qna_sl
-from typing import Optional
 from db import mark_qna_ml_ready
 from pydantic import BaseModel
 from vector_db import query_qna_sl_embeddings
@@ -507,6 +506,9 @@ class QuestionRequest(BaseModel):
     kb_id: List[str]
     question: str
 
+    previous_question: Optional[str] = None
+    previous_answer: Optional[str] = None
+
 
 class DeleteKBRequest(BaseModel):   
     job_id: str
@@ -957,6 +959,21 @@ def ask_question(request: QuestionRequest):
     print("\n--- FINAL CONTEXT ---")
     print(context[:1000])
 
+
+    # -------------------------------
+    # Inject previous conversation
+    # -------------------------------
+    if request.previous_question and request.previous_answer:
+
+        conversation_context = f"""
+    PREVIOUS CONVERSATION:
+
+    User: {request.previous_question}
+
+    Astrologer: {request.previous_answer}
+    """
+
+        context = f"{conversation_context}\n\n{context}"
 
     # -------------------------------
     # STEP 8: GENERATE ANSWER
