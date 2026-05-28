@@ -36,7 +36,7 @@ from vector_db import query_qna_sl_embeddings
 from qna_generator import generate_qnas
 from db import delete_qna_record
 from vector_db import delete_qna_embeddings
-#from prompts import build_welcome_prompt
+# from prompts import build_welcome_prompt
 
 
 # load_dotenv()
@@ -343,27 +343,27 @@ def generate_answer(question, context):
     return response.choices[0].message.content
 
 
-def generate_welcome_message(context, user_name="User"):
+# def generate_welcome_message(context, user_name="User"):
 
-    prompt = build_welcome_prompt(context, user_name)
+#     prompt = build_welcome_prompt(context, user_name)
 
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        temperature=0.7,
-        max_tokens=180,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a warm and thoughtful Vedic astrologer."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
+#     response = client.chat.completions.create(
+#         model="gpt-4.1-mini",
+#         temperature=0.7,
+#         max_tokens=180,
+#         messages=[
+#             {
+#                 "role": "system",
+#                 "content": "You are a warm and thoughtful Vedic astrologer."
+#             },
+#             {
+#                 "role": "user",
+#                 "content": prompt
+#             }
+#         ]
+#     )
 
-    return (response.choices[0].message.content or "").strip()
+#     return (response.choices[0].message.content or "").strip()
 
 
 # def generate_answer_gemini(question, context):
