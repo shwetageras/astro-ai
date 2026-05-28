@@ -1104,7 +1104,7 @@ def welcome_message(request: WelcomeRequest):
     if "ask questions about myself" in q:
 
         return {
-            "answer": "Sure! Feel free to ask anything you would like guidance about."
+            "answer": "Feel free to ask anything you would like guidance about."
         }
 
     # -------------------------------
