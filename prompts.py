@@ -141,14 +141,23 @@ The user has just opened the astrology chat for the first time.
 Generate a short, welcoming, personalized introduction based on the provided chart context.
 
 IMPORTANT:
-- Generate only the main astrology insight message.
-- Do not add greeting.
-- Do not add closing lines.
-- Mention the user's ascendant and current dasha if available.
-- Briefly mention 1 simple line about the user's nature or current phase.
+- Start exactly like this:
+  "Hi {user_name}"
+
+- Then continue naturally with:
+  "I have gone through your Vedic chart and as per this..."
+
+- Mention the user's ascendant and current dasha specifically if available in the context.
+
+- After that, add 1 short simple line about the user's nature or current phase in very easy language.
+
 - Keep the tone simple, direct, warm, and human.
-- Keep it concise and easy to read.
+
 - Do not sound poetic, overly descriptive, spiritual, or AI-generated.
+
+- Keep the onboarding message short like a real astrologer chat onboarding.
+
+- End naturally by inviting the user to ask anything they would like guidance about.
 
 USER NAME:
 {user_name}

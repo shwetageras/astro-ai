@@ -1070,12 +1070,15 @@ def welcome_message(request: WelcomeRequest):
         user_name=request.user_name
     )
 
+    # Convert paragraphs into separate chat messages
+    welcome_lines = [
+        line.strip()
+        for line in welcome_text.split("\n")
+        if line.strip()
+    ]
+
     return {
-        "messages": [
-            f"Hello {request.user_name} ✨",
-            welcome_text,
-            "Feel free to ask anything you would like guidance about."
-        ]
+        "messages": welcome_lines
     }
 
 
