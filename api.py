@@ -536,8 +536,9 @@ class QuestionRequest(BaseModel):
 
 
 class WelcomeRequest(BaseModel):
-    chart_ids: List[str]
-    user_name: str = "User"
+    question: str
+    chart_ids: List[str] = []
+    profile_id: int | None = None
 
 
 class DeleteKBRequest(BaseModel):   
@@ -1084,10 +1085,74 @@ def ask_question(request: QuestionRequest):
 @app.post("/welcome_message")
 def welcome_message(request: WelcomeRequest):
 
+    q = request.question.lower()
+
+    # -------------------------------
+    # CASE 1: Greeting
+    # -------------------------------
+    if "my name is" in q:
+
+        name = q.split("my name is")[-1].strip().replace(".", "").title()
+
+        return {
+            "answer": f"Hello {name} ✨"
+        }
+
+    # -------------------------------
+    # CASE 2: Generic onboarding
+    # -------------------------------
+    if "ask questions about myself" in q:
+
+        return {
+            "answer": "Sure ✨ Feel free to ask anything you would like guidance about."
+        }
+
+    # -------------------------------
+    # CASE 2.5: Simple Hello
+    # -------------------------------
+    if q.strip() in ["hello", "hi", "hey"]:
+
+        return {
+            "answer": "Hello ✨"
+        }
+
+    # -------------------------------
+    # CASE 3: Ascendant / Dasha
+    # -------------------------------
+    chart_details = get_chart_details_bulk(request.chart_ids)
+
+    if not chart_details:
+        return {
+            "answer": "I could not find your chart details."
+        }
+
+    all_chart_matches = []
+
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=request.question
+    )
+
+    query_embedding = response.data[0].embedding
+
+    for chart in chart_details:
+
+        results = query_chart_embeddings(
+            query_embedding,
+            chart["user_id"],
+            chart["profile_id"],
+            chart["chart_id"],
+            top_k=5
+        )
+
+        all_chart_matches.extend(results.matches)
+
+    context = build_context(all_chart_matches, None)
+
+    answer = generate_answer(request.question, context)
+
     return {
-        "messages": [
-            f"Hello {request.user_name} ✨"
-        ]
+        "answer": answer
     }
 
 @app.post("/qna_gemini")
