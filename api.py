@@ -36,7 +36,7 @@ from vector_db import query_qna_sl_embeddings
 from qna_generator import generate_qnas
 from db import delete_qna_record
 from vector_db import delete_qna_embeddings
-from prompts import build_welcome_prompt
+#from prompts import build_welcome_prompt
 
 
 # load_dotenv()
@@ -1025,62 +1025,70 @@ def ask_question(request: QuestionRequest):
         "answer": answer
     }
 
+# @app.post("/welcome_message")
+# def welcome_message(request: WelcomeRequest):
+
+#     chart_details = get_chart_details_bulk(request.chart_ids)
+
+#     if not chart_details:
+#         return {
+#             "messages": [
+#                 "Hello ✨",
+#                 "I’m here whenever you’d like guidance."
+#             ]
+#         }
+
+#     all_chart_matches = []
+
+#     # Create generic onboarding query embedding
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input="personality life overview current dasha strengths challenges"
+#     )
+
+#     query_embedding = response.data[0].embedding
+
+#     # Retrieve chart context
+#     for chart in chart_details:
+
+#         results = query_chart_embeddings(
+#             query_embedding,
+#             chart["user_id"],
+#             chart["profile_id"],
+#             chart["chart_id"],
+#             top_k=5
+#         )
+
+#         all_chart_matches.extend(results.matches)
+
+#     # Build context
+#     context = build_context(all_chart_matches, None)
+
+#     # Generate welcome message
+#     welcome_text = generate_welcome_message(
+#         context=context,
+#         user_name=request.user_name
+#     )
+
+#     # Convert paragraphs into separate chat messages
+#     welcome_lines = [
+#         line.strip()
+#         for line in welcome_text.split("\n")
+#         if line.strip()
+#     ]
+
+#     return {
+#         "messages": welcome_lines
+#     }
+
 @app.post("/welcome_message")
 def welcome_message(request: WelcomeRequest):
 
-    chart_details = get_chart_details_bulk(request.chart_ids)
-
-    if not chart_details:
-        return {
-            "messages": [
-                "Hello ✨",
-                "I’m here whenever you’d like guidance."
-            ]
-        }
-
-    all_chart_matches = []
-
-    # Create generic onboarding query embedding
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input="personality life overview current dasha strengths challenges"
-    )
-
-    query_embedding = response.data[0].embedding
-
-    # Retrieve chart context
-    for chart in chart_details:
-
-        results = query_chart_embeddings(
-            query_embedding,
-            chart["user_id"],
-            chart["profile_id"],
-            chart["chart_id"],
-            top_k=5
-        )
-
-        all_chart_matches.extend(results.matches)
-
-    # Build context
-    context = build_context(all_chart_matches, None)
-
-    # Generate welcome message
-    welcome_text = generate_welcome_message(
-        context=context,
-        user_name=request.user_name
-    )
-
-    # Convert paragraphs into separate chat messages
-    welcome_lines = [
-        line.strip()
-        for line in welcome_text.split("\n")
-        if line.strip()
-    ]
-
     return {
-        "messages": welcome_lines
+        "messages": [
+            f"Hello {request.user_name} ✨"
+        ]
     }
-
 
 @app.post("/qna_gemini")
 def qna_gemini(request: QuestionRequest):
