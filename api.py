@@ -1032,7 +1032,10 @@ def welcome_message(request: WelcomeRequest):
 
     if not chart_details:
         return {
-            "welcome_message": "Hello ✨ How can I help you today?"
+            "messages": [
+                "Hello ✨",
+                "I’m here whenever you’d like guidance."
+            ]
         }
 
     all_chart_matches = []
@@ -1067,8 +1070,15 @@ def welcome_message(request: WelcomeRequest):
         user_name=request.user_name
     )
 
+    # Convert paragraphs into separate chat messages
+    welcome_lines = [
+        line.strip()
+        for line in welcome_text.split("\n")
+        if line.strip()
+    ]
+
     return {
-        "welcome_message": welcome_text
+        "messages": welcome_lines
     }
 
 

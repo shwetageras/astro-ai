@@ -157,7 +157,7 @@ IMPORTANT:
 
 - Keep the onboarding message short like a real astrologer chat onboarding.
 
-- End naturally by saying the user can ask anything about career, relationships, money, or life.
+- End naturally by inviting the user to ask anything they would like guidance about.
 
 USER NAME:
 {user_name}
