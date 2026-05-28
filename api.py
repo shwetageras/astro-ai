@@ -36,6 +36,8 @@ from vector_db import query_qna_sl_embeddings
 from qna_generator import generate_qnas
 from db import delete_qna_record
 from vector_db import delete_qna_embeddings
+from prompts import build_welcome_prompt
+
 
 # load_dotenv()
 
@@ -341,6 +343,29 @@ def generate_answer(question, context):
     return response.choices[0].message.content
 
 
+def generate_welcome_message(context, user_name="User"):
+
+    prompt = build_welcome_prompt(context, user_name)
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        temperature=0.7,
+        max_tokens=180,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a warm and thoughtful Vedic astrologer."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return (response.choices[0].message.content or "").strip()
+
+
 # def generate_answer_gemini(question, context):
 #     prompt = build_prompt(question, context)
 
@@ -508,6 +533,11 @@ class QuestionRequest(BaseModel):
 
     previous_question: Optional[str] = None
     previous_answer: Optional[str] = None
+
+
+class WelcomeRequest(BaseModel):
+    chart_ids: List[str]
+    user_name: str = "User"
 
 
 class DeleteKBRequest(BaseModel):   
@@ -994,6 +1024,53 @@ def ask_question(request: QuestionRequest):
         "used_sl": use_sl_as_context,
         "answer": answer
     }
+
+@app.post("/welcome_message")
+def welcome_message(request: WelcomeRequest):
+
+    chart_details = get_chart_details_bulk(request.chart_ids)
+
+    if not chart_details:
+        return {
+            "welcome_message": "Hello ✨ How can I help you today?"
+        }
+
+    all_chart_matches = []
+
+    # Create generic onboarding query embedding
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input="personality life overview current dasha strengths challenges"
+    )
+
+    query_embedding = response.data[0].embedding
+
+    # Retrieve chart context
+    for chart in chart_details:
+
+        results = query_chart_embeddings(
+            query_embedding,
+            chart["user_id"],
+            chart["profile_id"],
+            chart["chart_id"],
+            top_k=5
+        )
+
+        all_chart_matches.extend(results.matches)
+
+    # Build context
+    context = build_context(all_chart_matches, None)
+
+    # Generate welcome message
+    welcome_text = generate_welcome_message(
+        context=context,
+        user_name=request.user_name
+    )
+
+    return {
+        "welcome_message": welcome_text
+    }
+
 
 @app.post("/qna_gemini")
 def qna_gemini(request: QuestionRequest):
