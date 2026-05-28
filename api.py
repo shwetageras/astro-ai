@@ -1095,7 +1095,7 @@ def welcome_message(request: WelcomeRequest):
         name = q.split("my name is")[-1].strip().replace(".", "").title()
 
         return {
-            "answer": f"Hello {name} ✨"
+            "answer": f"Hello {name}"
         }
 
     # -------------------------------
@@ -1104,7 +1104,7 @@ def welcome_message(request: WelcomeRequest):
     if "ask questions about myself" in q:
 
         return {
-            "answer": "Sure ✨ Feel free to ask anything you would like guidance about."
+            "answer": "Sure! Feel free to ask anything you would like guidance about."
         }
 
     # -------------------------------
