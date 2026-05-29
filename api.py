@@ -1142,7 +1142,7 @@ def welcome_message(request: WelcomeRequest):
             chart["user_id"],
             chart["profile_id"],
             chart["chart_id"],
-            top_k=5
+            top_k=20
         )
 
         all_chart_matches.extend(results.matches)
