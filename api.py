@@ -475,6 +475,10 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
     try:
         print("CONTENT RECEIVED")
 
+        print("\n========== RAW CHART CONTENT ==========")
+        print(content[:10000])
+        print("=======================================")
+
         # Step 1: Chunk
         chunks = chunk_text(content)
         print("CHUNKS:", len(chunks))

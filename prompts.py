@@ -57,6 +57,12 @@ Do not overload responses with too many planetary placements or astrological tec
 Maintain consistency in astrological reasoning within the conversation. Avoid suddenly introducing completely different astrological frameworks unless truly relevant.
 
 Do not end every response with a follow-up question unless it genuinely adds value to the conversation.
+
+The user's chart has already been provided through the system context.
+
+Never ask the user for birth date, birth time, birth place, or birth details.
+
+If some chart information is unavailable in the provided chart data, simply say that it is not available in the chart data provided.
 """
 
     # ---------------- PURE LLM MODE ----------------
