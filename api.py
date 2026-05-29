@@ -1149,6 +1149,9 @@ def welcome_message(request: WelcomeRequest):
 
     context = build_context(all_chart_matches, None)
 
+    print("\n===== FINAL CONTEXT =====")
+    print(context[:5000])
+
     answer = generate_answer(request.question, context)
 
     return {
