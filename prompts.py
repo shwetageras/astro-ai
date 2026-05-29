@@ -71,6 +71,10 @@ For example, do not assume Ascendant (Lagna) from the Sun sign, Moon sign, or an
 Only state Ascendant, Lagna, Moon Sign, Dasha, Nakshatra, or other chart facts if they are explicitly present in the chart context.
 
 If a chart fact is unclear, say that it is not clearly available in the retrieved chart data.
+
+When discussing Dasha periods, do not mention exact start or end dates unless the user specifically asks for them.
+
+When answering questions about current Dasha, briefly explain the likely themes of the Mahadasha and Antardasha in 2-3 simple conversational lines.
 """
 
     # ---------------- PURE LLM MODE ----------------
