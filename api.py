@@ -1151,6 +1151,15 @@ def welcome_message(request: WelcomeRequest):
 
         all_chart_matches.extend(results.matches)
 
+    # DEBUG HERE
+    print("\n===== TOP RETRIEVED CHUNKS =====")
+
+    for i, m in enumerate(all_chart_matches[:20], 1):
+        print(
+            f"{i}. SCORE={round(m.score,3)} | "
+            f"{m.metadata.get('text','')[:200]}"
+        )
+
     context = build_context(all_chart_matches, None)
 
     print("\n===== FINAL CONTEXT =====")
