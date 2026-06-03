@@ -545,7 +545,6 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
 
 def find_exact_kb_match(kb_id, question):
 
-    # Only trigger exact-match logic for "What is ..." questions
     if not question.lower().startswith("what is"):
         return None
 
@@ -564,11 +563,18 @@ def find_exact_kb_match(kb_id, question):
 
     for chunk in chunks:
 
-        text = chunk.metadata.get("text", "").lower()
+        text = chunk.metadata.get("text", "")
+        text_lower = text.lower()
 
-        if search_term in text:
+        if search_term in text_lower:
 
-            if "definition" in text:
+            # Strongest signal:
+            if (
+                search_term in text_lower
+                and "definition" in text_lower
+                and text_lower.index(search_term) < text_lower.index("definition")
+            ):
+                print("MATCH START:", text[:100])
                 return chunk
 
             if best_match is None:
