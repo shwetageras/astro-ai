@@ -573,11 +573,18 @@ def find_exact_kb_match(kb_id, question):
         ]
 
         # Strong match = yoga title followed by definition
-        if any(pattern in text_lower for pattern in title_patterns):
+        position = text_lower.find(search_term)
+
+        if (
+            any(pattern in text_lower for pattern in title_patterns)
+            and position >= 0
+            and position < 50
+        ):
 
             print("FOUND TITLE MATCH")
             print("MATCH POSITION:", text_lower.find(search_term))
             print("MATCH START:", text[:200])
+            print("MATCH POSITION:", position)
 
             return chunk
 
