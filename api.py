@@ -545,6 +545,7 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
 
 def find_exact_kb_match(kb_id, question):
 
+    print("========== NEW FIND_EXACT_KB_MATCH RUNNING ==========")
     if not question.lower().startswith("what is"):
         return None
 
