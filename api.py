@@ -1695,12 +1695,11 @@ def delete_qna_sl(request: DeleteQnaSLRequest):
 @app.get("/debug_parihasaka")
 def debug_parihasaka():
 
-    matches = get_all_kb_chunks("job_1779185466")
+    matches = get_all_kb_chunks("1780510186_300_Combinations1")
 
     found_chunks = []
 
     for m in matches:
-
         text = m.metadata.get("text", "")
 
         if "Parihasaka" in text:
@@ -1709,5 +1708,5 @@ def debug_parihasaka():
     return {
         "found": len(found_chunks) > 0,
         "count": len(found_chunks),
-        "chunks": found_chunks[:5]
+        "chunks": found_chunks[:3]
     }
