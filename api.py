@@ -256,8 +256,23 @@ def build_context(chart_results, kb_results):
             "source": "chart"
         })
 
+    # if kb_results:
+    #     for match in kb_results.matches:
+    #         all_chunks.append({
+    #             "score": match.score,
+    #             "text": match.metadata.get("text", ""),
+    #             "source": "kb"
+    #         })
+
     if kb_results:
-        for match in kb_results.matches:
+
+        kb_matches = (
+            kb_results.matches
+            if hasattr(kb_results, "matches")
+            else kb_results
+        )
+
+        for match in kb_matches:
             all_chunks.append({
                 "score": match.score,
                 "text": match.metadata.get("text", ""),
@@ -978,27 +993,63 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 5: KB RETRIEVAL
     # -------------------------------
+    # kb_results = None
+
+    # if use_kb:
+    #     if "job_n" in kb_ids:
+    #         kb_results = query_kb_embeddings(query_embedding, top_k=10)
+    #     else:
+    #         kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
+
     kb_results = None
 
     if use_kb:
-        if "job_n" in kb_ids:
-            kb_results = query_kb_embeddings(query_embedding, top_k=10)
+
+        exact_match = find_exact_kb_match(
+            kb_ids[0],
+            request.question
+        )
+
+        if exact_match:
+
+            print("USING EXACT MATCH")
+
+            kb_results = [exact_match]
+
         else:
-            kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
+
+            print("USING VECTOR SEARCH")
+
+            kb_results = query_kb_embeddings_filtered(
+                query_embedding,
+                kb_ids,
+                top_k=10
+            )
 
     # -------------------------------
     # STEP 6: DEBUG
     # -------------------------------
-    print("\n================ RETRIEVAL DEBUG ================")
+    # print("\n================ RETRIEVAL DEBUG ================")
 
-    print("\n--- CHART RESULTS (Merged) ---")
-    for match in all_chart_matches:
-        print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+    # print("\n--- CHART RESULTS (Merged) ---")
+    # for match in all_chart_matches:
+    #     print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+
+    # print("\n--- KB RESULTS ---")
+    # if kb_results:
+    #     for match in kb_results.matches:
+    #         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     print("\n--- KB RESULTS ---")
+
     if kb_results:
-        for match in kb_results.matches:
-            print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+
+        if isinstance(kb_results, list):
+            for match in kb_results:
+                print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
+        else:
+            for match in kb_results.matches:
+                print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     # -------------------------------
     # STEP 7: CONTEXT BUILDING
