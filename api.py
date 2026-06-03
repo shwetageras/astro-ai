@@ -275,7 +275,7 @@ def build_context(chart_results, kb_results):
 
     # Fallback if nothing passes threshold
     if not filtered_chunks:
-        filtered_chunks = all_chunks_backup[:5]   # take top 5 anyway
+        filtered_chunks = all_chunks_backup[:15]   # take top 5 anyway
 
     all_chunks = filtered_chunks
 
