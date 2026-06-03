@@ -524,6 +524,34 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
         print(f"❌ ERROR in chart text job {job_id}: {e}")
         update_chart_job(job_id, "failed", int(time.time()), str(e))
 
+# -----------------------------------
+# EXACT KB MATCH HELPER
+# -----------------------------------
+
+def find_exact_kb_match(kb_id, question):
+
+    chunks = get_all_kb_chunks(kb_id)
+
+    search_term = (
+        question.lower()
+        .replace("what is", "")
+        .replace("?", "")
+        .strip()
+    )
+
+    print("SEARCH TERM:", search_term)
+
+    for chunk in chunks:
+
+        text = chunk.metadata.get("text", "")
+
+        if search_term in text.lower():
+
+            print("FOUND EXACT MATCH")
+
+            return chunk
+
+    return None
 
 from pydantic import BaseModel
 
@@ -934,6 +962,18 @@ def ask_question(request: QuestionRequest):
             )
             all_chart_matches.extend(results.matches)
 
+    # -------------------------------
+    # TEST EXACT MATCH
+    # -------------------------------
+
+    if kb_ids:
+
+        test_match = find_exact_kb_match(
+            kb_ids[0],
+            request.question
+        )
+
+        print("TEST MATCH FOUND:", test_match is not None)
 
     # -------------------------------
     # STEP 5: KB RETRIEVAL
@@ -945,17 +985,6 @@ def ask_question(request: QuestionRequest):
             kb_results = query_kb_embeddings(query_embedding, top_k=10)
         else:
             kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
-
-    # # -------------------------------
-    # # STEP 5: KB RETRIEVAL
-    # # -------------------------------
-    # kb_results = None
-
-    # if use_kb:
-    #     if "kbn" in kb_ids:
-    #         kb_results = query_kb_embeddings(query_embedding, top_k=10)
-    #     else:
-    #         kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
 
     # -------------------------------
     # STEP 6: DEBUG
