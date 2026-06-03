@@ -36,6 +36,7 @@ from vector_db import query_qna_sl_embeddings
 from qna_generator import generate_qnas
 from db import delete_qna_record
 from vector_db import delete_qna_embeddings
+from vector_db import get_all_kb_chunks
 # from prompts import build_welcome_prompt
 
 
@@ -1689,4 +1690,24 @@ def delete_qna_sl(request: DeleteQnaSLRequest):
     return {
         "status": "success",
         "message": "QnA deleted successfully"
+    }
+
+@app.get("/debug_parihasaka")
+def debug_parihasaka():
+
+    matches = get_all_kb_chunks("job_1779185466")
+
+    found_chunks = []
+
+    for m in matches:
+
+        text = m.metadata.get("text", "")
+
+        if "Parihasaka" in text:
+            found_chunks.append(text)
+
+    return {
+        "found": len(found_chunks) > 0,
+        "count": len(found_chunks),
+        "chunks": found_chunks[:5]
     }
