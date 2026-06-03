@@ -584,6 +584,10 @@ def find_exact_kb_match(kb_id, question):
             best_score = score
             best_match = chunk
 
+    if best_match:
+        print("BEST SCORE:", best_score)
+        print("BEST MATCH:", best_match.metadata.get("text", "")[:300])
+
     return best_match
 
 from pydantic import BaseModel
