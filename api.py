@@ -574,7 +574,7 @@ def find_exact_kb_match(kb_id, question):
         score = 0
 
         position = text_lower.find(search_term)
-
+        score += max(0, 1000 - position)
         definition_pos = text_lower.find("definition")
 
         if definition_pos >= 0 and abs(definition_pos - position) < 200:
@@ -584,12 +584,9 @@ def find_exact_kb_match(kb_id, question):
             score += max(0, 500 - position)
 
         print(
-            "CANDIDATE:",
-            position,
-            definition_pos,
-            score,
-            text[:100]
+            f"CANDIDATE score={score} pos={position} def={definition_pos}"
         )
+        print(text[:250])
 
         if score > best_score:
             best_score = score
