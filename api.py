@@ -560,46 +560,28 @@ def find_exact_kb_match(kb_id, question):
     print("SEARCH TERM:", search_term)
 
     best_match = None
+    best_score = -1
 
     for chunk in chunks:
 
         text = chunk.metadata.get("text", "")
         text_lower = text.lower()
 
-        title_patterns = [
-            f"\n{search_term}\n",
-            f"{search_term}\ndefinition",
-            f"{search_term}\r\ndefinition"
-        ]
+        if search_term not in text_lower:
+            continue
 
-        # Strong match = yoga title followed by definition
+        score = 0
+
+        if "definition" in text_lower:
+            score += 1000
+
         position = text_lower.find(search_term)
 
-        if search_term in text_lower:
+        if position >= 0:
+            score += max(0, 500 - position)
 
-            print("----- CANDIDATE -----")
-            print("POSITION:", position)
-
-            if "definition" in text_lower:
-                print("HAS DEFINITION")
-
-            print(text[:500])
-
-        if (
-            any(pattern in text_lower for pattern in title_patterns)
-            and position >= 0
-            and position < 50
-        ):
-
-            print("FOUND TITLE MATCH")
-            print("MATCH POSITION:", text_lower.find(search_term))
-            print("MATCH START:", text[:200])
-            print("MATCH POSITION:", position)
-
-            return chunk
-
-        # Fallback
-        if search_term in text_lower and best_match is None:
+        if score > best_score:
+            best_score = score
             best_match = chunk
 
     return best_match
