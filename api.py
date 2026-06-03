@@ -348,7 +348,7 @@ def generate_answer(question, context):
 
     response = client.chat.completions.create(
         model="gpt-4.1-mini",
-        temperature=0.7,
+        temperature=0.2,
         max_tokens=max_tokens_value,
         messages=[
             {"role": "system", "content": "You are a careful and reasoning-based astrologer."},
