@@ -103,7 +103,13 @@ ASTROLOGER RESPONSE:
 STYLE:
 {style_instruction}
 
-Use the provided chart context naturally while answering.
+Use the provided context as the PRIMARY source of truth.
+
+IMPORTANT:
+- If the answer exists in CHART CONTEXT or KNOWLEDGE BASE, answer from that information first.
+- Do NOT override retrieved information with your own astrology knowledge.
+- Do NOT invent additional astrological meanings that are not present in the retrieved context.
+- If KNOWLEDGE BASE contains the answer, stay faithful to it and summarize it in simple language.
 
 If the question is broad or vague, focus only on the most important insight.
 
