@@ -560,17 +560,21 @@ def find_exact_kb_match(kb_id, question):
 
     print("SEARCH TERM:", search_term)
 
+    best_match = None
+
     for chunk in chunks:
 
-        text = chunk.metadata.get("text", "")
+        text = chunk.metadata.get("text", "").lower()
 
-        if search_term in text.lower():
+        if search_term in text:
 
-            print("FOUND EXACT MATCH")
+            if "definition" in text:
+                return chunk
 
-            return chunk
+            if best_match is None:
+                best_match = chunk
 
-    return None
+    return best_match
 
 from pydantic import BaseModel
 
