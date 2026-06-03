@@ -576,9 +576,14 @@ def find_exact_kb_match(kb_id, question):
         position = text_lower.find(search_term)
 
         if search_term in text_lower:
+
             print("----- CANDIDATE -----")
             print("POSITION:", position)
-            print(text[:300])
+
+            if "definition" in text_lower:
+                print("HAS DEFINITION")
+
+            print(text[:500])
 
         if (
             any(pattern in text_lower for pattern in title_patterns)
