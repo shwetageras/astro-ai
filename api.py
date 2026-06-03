@@ -1691,3 +1691,21 @@ def delete_qna_sl(request: DeleteQnaSLRequest):
         "status": "success",
         "message": "QnA deleted successfully"
     }
+
+
+@app.get("/find_yoga")
+def find_yoga(kb_id: str, yoga: str):
+
+    chunks = get_all_kb_chunks(kb_id)
+
+    matches = []
+
+    for chunk in chunks:
+
+        text = chunk.metadata.get("text", "")
+
+        if yoga.lower() in text.lower():
+
+            matches.append(text[:1000])
+
+    return matches[:5]
