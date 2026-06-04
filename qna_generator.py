@@ -5,6 +5,7 @@ from vector_db import get_all_kb_chunks
 from prompts import build_qna_generation_prompt
 from db import insert_generated_qna
 from db import get_file_id_from_job
+from settings import OPENAI_MODEL
 
 def generate_qnas(kb_id):
 
@@ -57,7 +58,7 @@ def generate_qnas(kb_id):
     # STEP 4: GPT GENERATION
     # -----------------------------------
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=OPENAI_MODEL,
         messages=[
             {
                 "role": "system",

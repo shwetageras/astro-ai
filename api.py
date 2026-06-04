@@ -4,7 +4,7 @@ import os
 import json
 import requests
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
-from openai import OpenAI
+from settings import OPENAI_MODEL
 # from google import genai
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
@@ -347,7 +347,7 @@ def generate_answer(question, context):
     max_tokens_value = get_max_tokens(question)
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=OPENAI_MODEL,
         temperature=0.2,
         max_tokens=max_tokens_value,
         messages=[
@@ -1536,7 +1536,7 @@ def qna_sl(request: QnaSLRequest):
     prompt = build_prompt(request.question, context)
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=OPENAI_MODEL,
         temperature=0.7,
         max_tokens=220,
         messages=[
