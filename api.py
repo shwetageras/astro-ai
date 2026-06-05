@@ -1386,9 +1386,13 @@ def qna_gemini(request: QuestionRequest):
     # STEP 8: GENERATE ANSWER
     # -------------------------------
     # answer = generate_answer_gemini(request.question, context)
-    
-    print("MODEL USED: GPT (NO SL)")
-    answer = generate_answer(request.question, context)
+
+    print("MODEL USED: GEMINI")
+
+    answer = generate_answer_gemini(
+        request.question,
+        context
+    )
 
     # -------------------------------
     # STEP 9: STORE ANSWER
