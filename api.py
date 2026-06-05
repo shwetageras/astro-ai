@@ -25,7 +25,7 @@ from prompts import build_prompt
 from typing import List, Optional
 from vector_db import query_kb_embeddings_filtered
 from dotenv import load_dotenv
-# import google.generativeai as genai
+import google.generativeai as genai
 from db import insert_qna_sl
 from kb_builder import client
 from prompts import build_prompt
@@ -42,7 +42,9 @@ from vector_db import get_all_kb_chunks
 
 # load_dotenv()
 
-# genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 app = FastAPI()
 
@@ -382,33 +384,33 @@ def generate_answer(question, context):
 #     return (response.choices[0].message.content or "").strip()
 
 
-# def generate_answer_gemini(question, context):
-#     prompt = build_prompt(question, context)
+def generate_answer_gemini(question, context):
+    prompt = build_prompt(question, context)
 
-#     try:
-#         model = genai.GenerativeModel("models/gemini-2.5-flash")
-#         response = model.generate_content(prompt)
+    try:
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content(prompt)
 
-#         from typing import cast
+        from typing import cast
 
-#         res_text = getattr(response, "text", "")
+        res_text = getattr(response, "text", "")
 
-#         if res_text:
-#             return cast(str, res_text).strip()
+        if res_text:
+            return cast(str, res_text).strip()
 
-#         if hasattr(response, "candidates") and response.candidates:
-#             try:
-#                 candidate_text = response.candidates[0].content.parts[0].text
-#                 if isinstance(candidate_text, str):
-#                     return candidate_text.strip()
-#             except (AttributeError, IndexError):
-#                 pass
+        if hasattr(response, "candidates") and response.candidates:
+            try:
+                candidate_text = response.candidates[0].content.parts[0].text
+                if isinstance(candidate_text, str):
+                    return candidate_text.strip()
+            except (AttributeError, IndexError):
+                pass
 
-#         return "⚠️ Empty Gemini response"
+        return "⚠️ Empty Gemini response"
 
-#     except Exception as e:
-#         print("❌ GEMINI ERROR:", str(e))
-#         return f"Gemini error: {str(e)}"
+    except Exception as e:
+        print("❌ GEMINI ERROR:", str(e))
+        return f"Gemini error: {str(e)}"
 
 
 def process_text(text, file_id, file_name, job_id, timestamp):
