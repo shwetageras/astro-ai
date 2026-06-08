@@ -1186,9 +1186,14 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 10: RESPONSE
     # -------------------------------
+    c_rttl = 25
+
     return {
         "source": "SL+LLM" if use_sl_as_context else "LLM",
         "used_sl": use_sl_as_context,
+        "used_kb": use_kb,
+        "used_chart": use_chart,
+        "rttl": c_rttl,
         "answer": answer
     }
 
@@ -1506,9 +1511,14 @@ def qna_gpt_mini(request: QuestionRequest):
     # -------------------------------
     # STEP 10: RESPONSE
     # -------------------------------
+    c_rttl = 30
+
     return {
         "source": "SL+LLM" if use_sl_as_context else "LLM",
         "used_sl": use_sl_as_context,
+        "used_kb": use_kb,
+        "used_chart": use_chart,
+        "rttl": c_rttl,
         "answer": answer
     }
 
@@ -1826,9 +1836,14 @@ def qna_gemini(request: QuestionRequest):
     # -------------------------------
     # STEP 10: RESPONSE
     # -------------------------------
+    c_rttl = 35
+
     return {
         "source": "SL+LLM" if use_sl_as_context else "LLM",
         "used_sl": use_sl_as_context,
+        "used_kb": use_kb,
+        "used_chart": use_chart,
+        "rttl": c_rttl,
         "answer": answer
     }
 
