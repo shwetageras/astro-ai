@@ -643,6 +643,7 @@ class QueryRequest(BaseModel):
 class QuestionRequest(BaseModel):
     chart_ids: List[str]
     kb_id: List[str]
+    sl_id: List[str] = []
     question: str
 
     previous_question: Optional[str] = None
@@ -897,6 +898,10 @@ def ask_question(request: QuestionRequest):
 
     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+    use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
+
+    print("SL IDS:", request.sl_id)
+    print("USE SL:", use_sl)
 
     # -------------------------------
     # STEP 0: Initialize SL vars
@@ -906,25 +911,35 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 0.1: Check SL memory
     # -------------------------------
-    sl_result = qna_sl_search(
-        QnaSearchRequest(
-            question=request.question,
-            kb_id=kb_id
+    if use_sl:
+
+        sl_result = qna_sl_search(
+            QnaSearchRequest(
+                question=request.question,
+                kb_id=kb_id
+            )
         )
-    )
 
-    sl_found = sl_result.get("found")
-    matches = sl_result.get("matches", [])
+        sl_found = sl_result.get("found")
+        matches = sl_result.get("matches", [])
 
-    if not matches:
+        if not matches:
+            sl_found = False
+            sl_score = None
+            second = None
+        else:
+            best = matches[0]
+            second = matches[1] if len(matches) > 1 else None
+            sl_score = best["score"]
+
+    else:
+
+        print("SL DISABLED")
+
         sl_found = False
+        matches = []
         sl_score = None
         second = None
-    else:
-        best = matches[0]
-        second = matches[1] if len(matches) > 1 else None
-
-        sl_score = best["score"]
         
     # 🔍 DEBUG PRINTS
     print("SL FOUND:", sl_found)
@@ -1198,6 +1213,10 @@ def qna_gpt_mini(request: QuestionRequest):
 
     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+    use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
+
+    print("SL IDS:", request.sl_id)
+    print("USE SL:", use_sl)
 
     # -------------------------------
     # STEP 0: Initialize SL vars
@@ -1207,25 +1226,35 @@ def qna_gpt_mini(request: QuestionRequest):
     # -------------------------------
     # STEP 0.1: Check SL memory
     # -------------------------------
-    sl_result = qna_sl_search(
-        QnaSearchRequest(
-            question=request.question,
-            kb_id=kb_id
+    if use_sl:
+
+        sl_result = qna_sl_search(
+            QnaSearchRequest(
+                question=request.question,
+                kb_id=kb_id
+            )
         )
-    )
 
-    sl_found = sl_result.get("found")
-    matches = sl_result.get("matches", [])
+        sl_found = sl_result.get("found")
+        matches = sl_result.get("matches", [])
 
-    if not matches:
+        if not matches:
+            sl_found = False
+            sl_score = None
+            second = None
+        else:
+            best = matches[0]
+            second = matches[1] if len(matches) > 1 else None
+            sl_score = best["score"]
+
+    else:
+
+        print("SL DISABLED")
+
         sl_found = False
+        matches = []
         sl_score = None
         second = None
-    else:
-        best = matches[0]
-        second = matches[1] if len(matches) > 1 else None
-
-        sl_score = best["score"]
         
     # 🔍 DEBUG PRINTS
     print("SL FOUND:", sl_found)
@@ -1504,6 +1533,10 @@ def qna_gemini(request: QuestionRequest):
 
     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+    use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
+
+    print("SL IDS:", request.sl_id)
+    print("USE SL:", use_sl)
 
     # -------------------------------
     # STEP 0: Initialize SL vars
@@ -1513,25 +1546,35 @@ def qna_gemini(request: QuestionRequest):
     # -------------------------------
     # STEP 0.1: Check SL memory
     # -------------------------------
-    sl_result = qna_sl_search(
-        QnaSearchRequest(
-            question=request.question,
-            kb_id=kb_id
+    if use_sl:
+
+        sl_result = qna_sl_search(
+            QnaSearchRequest(
+                question=request.question,
+                kb_id=kb_id
+            )
         )
-    )
 
-    sl_found = sl_result.get("found")
-    matches = sl_result.get("matches", [])
+        sl_found = sl_result.get("found")
+        matches = sl_result.get("matches", [])
 
-    if not matches:
+        if not matches:
+            sl_found = False
+            sl_score = None
+            second = None
+        else:
+            best = matches[0]
+            second = matches[1] if len(matches) > 1 else None
+            sl_score = best["score"]
+
+    else:
+
+        print("SL DISABLED")
+
         sl_found = False
+        matches = []
         sl_score = None
         second = None
-    else:
-        best = matches[0]
-        second = matches[1] if len(matches) > 1 else None
-
-        sl_score = best["score"]
         
     # 🔍 DEBUG PRINTS
     print("SL FOUND:", sl_found)
