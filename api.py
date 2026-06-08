@@ -880,6 +880,8 @@ async def upload_chart(
 
 @app.post("/ask_question")
 def ask_question(request: QuestionRequest):
+    
+    start_time = time.time()
 
     chart_ids = request.chart_ids
     
@@ -1186,7 +1188,12 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 10: RESPONSE
     # -------------------------------
-    c_rttl = 25
+    c_rttl = round(
+        (time.time() - start_time) * 1000,
+        2
+    )
+
+    print("TOTAL RTTL (ms):", c_rttl)
 
     return {
         "source": "SL+LLM" if use_sl_as_context else "LLM",
@@ -1200,6 +1207,8 @@ def ask_question(request: QuestionRequest):
 
 @app.post("/qna_gpt_mini")
 def qna_gpt_mini(request: QuestionRequest):
+
+    start_time = time.time()
 
     chart_ids = request.chart_ids
     
@@ -1511,7 +1520,12 @@ def qna_gpt_mini(request: QuestionRequest):
     # -------------------------------
     # STEP 10: RESPONSE
     # -------------------------------
-    c_rttl = 30
+    c_rttl = round(
+        (time.time() - start_time) * 1000,
+        2
+    )
+
+    print("TOTAL RTTL (ms):", c_rttl)
 
     return {
         "source": "SL+LLM" if use_sl_as_context else "LLM",
@@ -1525,6 +1539,8 @@ def qna_gpt_mini(request: QuestionRequest):
 
 @app.post("/qna_gemini")
 def qna_gemini(request: QuestionRequest):
+
+    start_time = time.time()
 
     chart_ids = request.chart_ids
     
@@ -1836,7 +1852,12 @@ def qna_gemini(request: QuestionRequest):
     # -------------------------------
     # STEP 10: RESPONSE
     # -------------------------------
-    c_rttl = 35
+    c_rttl = round(
+        (time.time() - start_time) * 1000,
+        2
+    )
+
+    print("TOTAL RTTL (ms):", c_rttl)
 
     return {
         "source": "SL+LLM" if use_sl_as_context else "LLM",
