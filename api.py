@@ -1196,7 +1196,7 @@ def ask_question(request: QuestionRequest):
     print("TOTAL RTTL (ms):", c_rttl)
 
     return {
-        "source": "SL+LLM" if use_sl_as_context else "LLM",
+        "source": "gpt-4.1",
         "used_sl": use_sl_as_context,
         "used_kb": use_kb,
         "used_chart": use_chart,
@@ -1528,7 +1528,7 @@ def qna_gpt_mini(request: QuestionRequest):
     print("TOTAL RTTL (ms):", c_rttl)
 
     return {
-        "source": "SL+LLM" if use_sl_as_context else "LLM",
+        "source": "gpt-4.1-mini",
         "used_sl": use_sl_as_context,
         "used_kb": use_kb,
         "used_chart": use_chart,
@@ -1860,7 +1860,7 @@ def qna_gemini(request: QuestionRequest):
     print("TOTAL RTTL (ms):", c_rttl)
 
     return {
-        "source": "SL+LLM" if use_sl_as_context else "LLM",
+        "source": "gemini-2.5-flash",
         "used_sl": use_sl_as_context,
         "used_kb": use_kb,
         "used_chart": use_chart,
