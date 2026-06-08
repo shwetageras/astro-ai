@@ -910,16 +910,31 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     use_sl_as_context = False
     
+    ttl_q_embedding = 0
+    ttl_sl_match = 0
+    ttl_kb_context = 0
+    ttl_chart_context = 0
+    ttl_prompt = 0
+    ttl_reasoning = 0
+    ttl_delivery = 0
+
     # -------------------------------
     # STEP 0.1: Check SL memory
     # -------------------------------
     if use_sl:
+
+        sl_start = time.perf_counter()
 
         sl_result = qna_sl_search(
             QnaSearchRequest(
                 question=request.question,
                 kb_id=kb_id
             )
+        )
+
+        ttl_sl_match = round(
+            (time.perf_counter() - sl_start) * 1000,
+            2
         )
 
         sl_found = sl_result.get("found")
@@ -1040,15 +1055,24 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 3: EMBEDDING
     # -------------------------------
+    embedding_start = time.perf_counter()
+
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=request.question
+    )
+
+    ttl_q_embedding = round(
+        (time.perf_counter() - embedding_start) * 1000,
+        2
     )
     query_embedding = response.data[0].embedding
 
     # -------------------------------
     # STEP 4: CHART RETRIEVAL
     # -------------------------------
+    chart_start = time.perf_counter()
+
     if use_chart and chart_details:
         for chart in chart_details:
             results = query_chart_embeddings(
@@ -1059,6 +1083,11 @@ def ask_question(request: QuestionRequest):
                 top_k=5
             )
             all_chart_matches.extend(results.matches)
+
+    ttl_chart_context = round(
+        (time.perf_counter() - chart_start) * 1000,
+        2
+    )
 
     # -------------------------------
     # TEST EXACT MATCH
@@ -1086,6 +1115,8 @@ def ask_question(request: QuestionRequest):
 
     kb_results = None
 
+    kb_start = time.perf_counter()
+
     if use_kb:
 
         exact_match = find_exact_kb_match(
@@ -1108,6 +1139,11 @@ def ask_question(request: QuestionRequest):
                 kb_ids,
                 top_k=10
             )
+
+    ttl_kb_context = round(
+        (time.perf_counter() - kb_start) * 1000,
+        2
+    )
 
     # -------------------------------
     # STEP 6: DEBUG
@@ -1137,6 +1173,8 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 7: CONTEXT BUILDING
     # -------------------------------
+    prompt_start = time.perf_counter()
+
     if not use_chart and not use_kb:
         context = ""   # 🔥 PURE LLM MODE
     else:
@@ -1174,16 +1212,38 @@ def ask_question(request: QuestionRequest):
 
         context = f"{conversation_context}\n\n{context}"
 
+    ttl_context_build = round(
+        (time.perf_counter() - prompt_start) * 1000,
+        2
+    )
+
     # -------------------------------
     # STEP 8: GENERATE ANSWER
     # -------------------------------
-    answer = generate_answer(request.question, context)
+    reasoning_start = time.perf_counter()
+
+    answer = generate_answer(
+        request.question,
+        context
+    )
+
+    ttl_reasoning = round(
+        (time.perf_counter() - reasoning_start) * 1000,
+        2
+    )
 
     # -------------------------------
     # STEP 9: STORE ANSWER
     # -------------------------------
+    delivery_start = time.perf_counter()
+
     if qna_id:
         update_qna_answer(qna_id, answer)
+
+    ttl_delivery = round(
+        (time.perf_counter() - delivery_start) * 1000,
+        2
+    )
 
     # -------------------------------
     # STEP 10: RESPONSE
@@ -1193,17 +1253,55 @@ def ask_question(request: QuestionRequest):
         2
     )
 
+    ttl_breakdown = [
+        {
+            "stage": "ttl_q_embedding",
+            "time_ms": ttl_q_embedding
+        },
+        {
+            "stage": "ttl_sl_match",
+            "time_ms": ttl_sl_match
+        },
+        {
+            "stage": "ttl_kb_context",
+            "time_ms": ttl_kb_context
+        },
+        {
+            "stage": "ttl_chart_context",
+            "time_ms": ttl_chart_context
+        },
+        {
+            "stage": "ttl_context_build",
+            "time_ms": ttl_prompt
+        },
+        {
+            "stage": "ttl_reasoning",
+            "time_ms": ttl_reasoning
+        },
+        {
+            "stage": "ttl_delivery",
+            "time_ms": ttl_delivery
+        }
+    ]
+
     print("TOTAL RTTL (ms):", c_rttl)
+
+    print("TTL BREAKDOWN:")
+    print(ttl_breakdown)
 
     return {
         "source": "gpt-4.1",
+
         "used_sl": use_sl_as_context,
         "used_kb": use_kb,
         "used_chart": use_chart,
+
         "rttl": c_rttl,
+
+        "c_ttl": ttl_breakdown,
+
         "answer": answer
     }
-
 
 @app.post("/qna_gpt_mini")
 def qna_gpt_mini(request: QuestionRequest):
