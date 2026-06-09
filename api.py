@@ -808,6 +808,7 @@ async def upload_chart(
     content: str = Form(None),
     file: UploadFile = File(None)
 ):
+    print("========== UPLOAD CHART HIT ==========")
 
 
     timestamp = int(time.time())
@@ -849,10 +850,19 @@ async def upload_chart(
     # 🔥 CASE 2: FILE INPUT
     elif isCharttype == "file":
 
+        print("FILE UPLOAD MODE")
+
         if not file:
             raise HTTPException(status_code=400, detail="File required for chart upload")
-        
+
+        print("FILE NAME:", file.filename)
+
         file_bytes = await file.read()
+
+        print(
+            "FILE SIZE MB:",
+            round(len(file_bytes) / (1024 * 1024), 2)
+        )
 
         # Save to S3
         save_file(file_bytes, file_id)
