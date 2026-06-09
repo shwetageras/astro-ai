@@ -1109,7 +1109,7 @@ def ask_question(request: QuestionRequest):
                 chart["user_id"],
                 chart["profile_id"],
                 chart["chart_id"],
-                top_k=5
+                top_k=10
             )
             all_chart_matches.extend(results.matches)
 
@@ -1166,7 +1166,7 @@ def ask_question(request: QuestionRequest):
             kb_results = query_kb_embeddings_filtered(
                 query_embedding,
                 kb_ids,
-                top_k=10
+                top_k=15
             )
 
     ttl_kb_context = round(
@@ -1510,7 +1510,7 @@ def qna_gpt_mini(request: QuestionRequest):
                 chart["user_id"],
                 chart["profile_id"],
                 chart["chart_id"],
-                top_k=5
+                top_k=10
             )
             all_chart_matches.extend(results.matches)
 
@@ -1560,7 +1560,7 @@ def qna_gpt_mini(request: QuestionRequest):
             kb_results = query_kb_embeddings_filtered(
                 query_embedding,
                 kb_ids,
-                top_k=10
+                top_k=15
             )
 
     # -------------------------------
@@ -1842,7 +1842,7 @@ def qna_gemini(request: QuestionRequest):
                 chart["user_id"],
                 chart["profile_id"],
                 chart["chart_id"],
-                top_k=5
+                top_k=10
             )
             all_chart_matches.extend(results.matches)
 
@@ -1892,7 +1892,7 @@ def qna_gemini(request: QuestionRequest):
             kb_results = query_kb_embeddings_filtered(
                 query_embedding,
                 kb_ids,
-                top_k=10
+                top_k=15
             )
 
     # -------------------------------
