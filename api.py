@@ -184,17 +184,36 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
         print("FILE TYPE:", file_ext)
 
         if file_ext == "pdf":
+
             text = read_pdf(temp_file_path)
+
         elif file_ext in ["md", "txt"]:
+
             from kb_builder import read_text_file
             text = read_text_file(temp_file_path)
+
+        elif file_ext == "json":
+
+            with open(temp_file_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+
+            text = json.dumps(
+                json_data,
+                ensure_ascii=False,
+                indent=2
+            )
+
         else:
-            raise Exception(f"Unsupported file type: {file_ext}")
+
+            raise Exception(
+                f"Unsupported file type: {file_ext}"
+            )
 
         print("TEXT EXTRACTED")
+        print("TEXT LENGTH:", len(text))
 
         chunks = chunk_text(text)
-        print("CHUNKS:", len(chunks))
+        print("TOTAL CHUNKS:", len(chunks))
 
         embeddings = create_embeddings(chunks)
         print("EMBEDDINGS:", len(embeddings))
