@@ -28,7 +28,7 @@ def read_text_file(file_path):
 # -------------------------------
 # TEXT CHUNKING
 # -------------------------------
-def chunk_text(text, max_tokens=200):
+def chunk_text(text, max_tokens=400):
 
     enc = tiktoken.get_encoding("cl100k_base")
 
