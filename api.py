@@ -1718,6 +1718,8 @@ def qna_gemini(request: QuestionRequest):
             )
         )
 
+        print("SL RESULT RAW:", sl_result)
+
         ttl_sl_match = round(
             (time.perf_counter() - sl_start) * 1000,
             2
