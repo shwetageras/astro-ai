@@ -711,6 +711,23 @@ class QnaGenerateRequest(BaseModel):
 class DeleteQnaSLRequest(BaseModel):
     qna_id: int
 
+
+class RetrievalTestRequest(BaseModel):
+    question: str
+
+    kb_ids: Optional[list[str]] = None
+
+    user_id: Optional[str] = None
+    profile_id: Optional[str] = None
+    chart_id: Optional[str] = None
+
+    include_kb: bool = True
+    include_chart: bool = False
+    include_sl: bool = False
+
+    top_k: int = 50
+
+
 # Create API → /upload_kb
 @app.post("/upload_kb")
 async def upload_kb(
@@ -2775,3 +2792,73 @@ def find_yoga(kb_id: str, yoga: str):
             matches.append(text[:1000])
 
     return matches[:5]
+
+
+@app.post("/retrieval_test")
+async def retrieval_test(request: RetrievalTestRequest):
+    try:
+
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=request.question
+        )
+
+        query_embedding = response.data[0].embedding
+
+        exact_match = None
+
+        if (
+            request.include_kb
+            and request.kb_ids
+            and len(request.kb_ids) > 0
+        ):
+            exact_match = find_exact_kb_match(
+                request.kb_ids[0],
+                request.question
+            )
+
+        semantic_results = None
+
+        if request.include_kb and request.kb_ids:
+
+            semantic_results = query_kb_embeddings_filtered(
+                query_embedding,
+                request.kb_ids,
+                top_k=request.top_k
+            )
+
+        return {
+            "status": "success",
+            "question": request.question,
+
+            "embedding_dimension": len(query_embedding),
+
+            "exact_match_found": exact_match is not None,
+
+            "exact_match_text":
+                exact_match.metadata.get("text", "")[:500]
+                if exact_match
+                else None,
+
+            "semantic_match_count":
+                len(semantic_results.matches)
+                if semantic_results
+                else 0,
+
+            "semantic_matches": [
+                {
+                    "rank": idx + 1,
+                    "score": round(match.score, 4),
+                    "text": match.metadata.get("text", "")[:500]
+                }
+                for idx, match in enumerate(
+                    semantic_results.matches[:10]
+                )
+            ] if semantic_results else []
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
