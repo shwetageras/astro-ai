@@ -38,6 +38,7 @@ from db import delete_qna_record
 from vector_db import delete_qna_embeddings
 from vector_db import get_all_kb_chunks
 # from prompts import build_welcome_prompt
+from vector_db import index
 
 
 # load_dotenv()
@@ -217,6 +218,13 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
         embeddings = create_embeddings(chunks)
         print("EMBEDDINGS:", len(embeddings))
+
+        print("UPSERT METADATA:")
+        print({
+            "chart_id": str(chart_id),
+            "user_id": str(user_id),
+            "profile_id": str(profile_id)
+        })
 
         upsert_embeddings(
             file_id,
@@ -712,20 +720,22 @@ class DeleteQnaSLRequest(BaseModel):
     qna_id: int
 
 
-class RetrievalTestRequest(BaseModel):
-    question: str
+# class RetrievalTestRequest(BaseModel):
+#     question: str
 
-    kb_ids: Optional[list[str]] = None
+#     kb_ids: Optional[list[str]] = None
 
-    user_id: Optional[str] = None
-    profile_id: Optional[str] = None
-    chart_id: Optional[str] = None
+#     user_id: Optional[str] = None
+#     profile_id: Optional[str] = None
+#     chart_id: Optional[str] = None
 
-    include_kb: bool = True
-    include_chart: bool = False
-    include_sl: bool = False
+#     include_kb: bool = True
+#     include_chart: bool = False
+#     include_sl: bool = False
 
-    top_k: int = 50
+#     top_k: int = 50
+
+
 
 
 # Create API → /upload_kb
@@ -2794,6 +2804,328 @@ def find_yoga(kb_id: str, yoga: str):
     return matches[:5]
 
 
+class RetrievalTestRequest(BaseModel):
+    question: str
+
+    kb_ids: Optional[list[str]] = None
+
+    user_id: Optional[str] = None
+    profile_id: Optional[str] = None
+    chart_id: Optional[str] = None
+
+    include_kb: bool = True
+    include_chart: bool = False
+    include_sl: bool = False
+
+    top_k: int = 50
+
+# @app.post("/retrieval_test")
+# async def retrieval_test(request: RetrievalTestRequest):
+#     try:
+
+#         # --------------------------------
+#         # EMBEDDING
+#         # --------------------------------
+#         response = client.embeddings.create(
+#             model="text-embedding-3-small",
+#             input=request.question
+#         )
+
+#         query_embedding = response.data[0].embedding
+
+#         # --------------------------------
+#         # EXACT MATCH
+#         # --------------------------------
+#         exact_match = None
+
+#         if (
+#             request.include_kb
+#             and request.kb_ids
+#             and len(request.kb_ids) > 0
+#         ):
+#             exact_match = find_exact_kb_match(
+#                 request.kb_ids[0],
+#                 request.question
+#             )
+
+#         # --------------------------------
+#         # VECTOR SEARCH
+#         # --------------------------------
+#         semantic_results = None
+
+#         # -----------------------------
+#         # KB Retrieval
+#         # -----------------------------
+#         if (
+#             request.include_kb
+#             and request.kb_ids
+#         ):
+#             semantic_results = query_kb_embeddings_filtered(
+#                 query_embedding,
+#                 request.kb_ids,
+#                 top_k=request.top_k
+#             )
+
+#         # -----------------------------
+#         # Chart Retrieval
+#         # -----------------------------
+#         elif (
+#             request.include_chart
+#             and request.user_id
+#             and request.profile_id
+#             and request.chart_id
+#         ):
+#             semantic_results = query_chart_embeddings(
+#                 query_embedding,
+#                 request.user_id,
+#                 request.profile_id,
+#                 request.chart_id,
+#                 top_k=request.top_k
+#             )
+
+#         # -----------------------------
+#         # SL Retrieval
+#         # -----------------------------
+#         elif (
+#             request.include_sl
+#             and request.kb_ids
+#         ):
+#             semantic_results = query_qna_sl_embeddings(
+#                 query_embedding,
+#                 request.kb_ids[0],
+#                 top_k=request.top_k
+#             )
+
+#         # --------------------------------
+#         # NOISE FILTER
+#         # --------------------------------
+
+#         import re
+
+#         def is_noise_chunk(text):
+
+#             text_lower = text.lower()
+
+#             # obvious PDF garbage
+#             if "appendix" in text_lower:
+#                 return True
+
+#             if "contents" in text_lower:
+#                 return True
+
+#             # count numbers
+#             numbers = re.findall(r"\d+", text)
+
+#             # chunks full of page numbers/index entries
+#             if len(numbers) > 20:
+#                 return True
+
+#             return False
+
+#         filtered_matches = []
+
+#         if semantic_results:
+
+#             for match in semantic_results.matches:
+
+#                 text = match.metadata.get("text", "")
+
+#                 if not is_noise_chunk(text):
+#                     filtered_matches.append(match)
+
+
+#         # ==========================================
+#         # DEBUG RAW PINECONE RESULTS
+#         # ==========================================
+#         if semantic_results:
+
+#             print("\n===== ORIGINAL PINECONE =====")
+
+#             for idx, match in enumerate(
+#                 semantic_results.matches[:20]
+#             ):
+
+#                 print(
+#                     idx + 1,
+#                     round(match.score, 4),
+#                     match.metadata.get("text", "")[:150]
+#                 )
+
+#             print("\n===== AFTER NOISE FILTER =====")
+
+#             for idx, match in enumerate(
+#                 filtered_matches[:20]
+#             ):
+
+#                 print(
+#                     idx + 1,
+#                     round(match.score, 4),
+#                     match.metadata.get("text", "")[:150]
+#                 )
+
+#         # --------------------------------
+#         # RERANKING
+#         # --------------------------------
+
+#         query_lower = request.question.lower()
+
+#         query_phrase = None
+
+#         if "yoga" in query_lower:
+
+#             words = query_lower.split()
+
+#             for i in range(len(words) - 1):
+
+#                 if words[i + 1] == "yoga":
+
+#                     query_phrase = words[i] + " yoga"
+#                     break
+
+#         query_words = set(
+#             re.findall(
+#                 r"[a-zA-Z]+",
+#                 request.question.lower()
+#             )
+#         )
+
+#         reranked = []
+
+#         for match in filtered_matches:
+
+#             text = match.metadata.get(
+#                 "text",
+#                 ""
+#             ).lower()
+
+#             overlap_score = sum(
+#                 1
+#                 for word in query_words
+#                 if len(word) > 3 and word in text
+#             )
+
+#             final_score = match.score
+
+#             final_score += overlap_score * 0.05
+
+#             reranked.append(
+#                 (final_score, match)
+#             )
+
+#         reranked.sort(
+#             key=lambda x: x[0],
+#             reverse=True
+#         )
+
+#         filtered_matches = [
+#             item[1]
+#             for item in reranked
+#         ]
+
+#         # --------------------------------
+#         # FOUND RANKS
+#         # --------------------------------
+
+#         search_terms = [
+#             "yupa yoga",
+#             "vasumathi yoga"
+#         ]
+
+#         found_ranks = {}
+
+#         for term in search_terms:
+
+#             found_ranks[term] = None
+
+#             for idx, match in enumerate(filtered_matches):
+
+#                 text = match.metadata.get(
+#                     "text",
+#                     ""
+#                 ).lower()
+
+#                 if term in text:
+
+#                     found_ranks[term] = idx + 1
+#                     break
+
+#         # --------------------------------
+#         # RESPONSE
+#         # --------------------------------
+
+#         return {
+#             "status": "success",
+
+#             "found_ranks": found_ranks,
+
+#             "question": request.question,
+
+#             "embedding_dimension": len(
+#                 query_embedding
+#             ),
+
+#             "exact_match_found":
+#                 exact_match is not None,
+
+#             "exact_match_text":
+#                 exact_match.metadata.get(
+#                     "text",
+#                     ""
+#                 )[:500]
+#                 if exact_match
+#                 else None,
+
+#             "semantic_match_count":
+#                 len(filtered_matches),
+
+#             "semantic_matches": [
+#                 {
+#                     "rank": idx + 1,
+
+#                     "score": round(
+#                         reranked[idx][0],
+#                         4
+#                     ),
+
+#                     "file_id":
+#                         match.metadata.get(
+#                             "file_id"
+#                         ),
+
+#                     "user_id":
+#                         match.metadata.get(
+#                             "user_id"
+#                         ),
+
+#                     "profile_id":
+#                         match.metadata.get(
+#                             "profile_id"
+#                         ),
+
+#                     "chart_id":
+#                         match.metadata.get(
+#                             "chart_id"
+#                         ),
+
+#                     "text":
+#                         match.metadata.get(
+#                             "text",
+#                             ""
+#                         )[:500]
+#                 }
+#                 for idx, match in enumerate(
+#                     filtered_matches[:10]
+#                 )
+#             ]
+#         }
+
+#     except Exception as e:
+
+#         raise HTTPException(
+#             status_code=500,
+#             detail=str(e)
+#         )
+
 @app.post("/retrieval_test")
 async def retrieval_test(request: RetrievalTestRequest):
     try:
@@ -2809,54 +3141,35 @@ async def retrieval_test(request: RetrievalTestRequest):
         query_embedding = response.data[0].embedding
 
         # --------------------------------
-        # EXACT MATCH
+        # CHART RETRIEVAL ONLY (HARDCODED)
         # --------------------------------
-        exact_match = None
+        print("\n========== CHART RETRIEVAL TEST ==========")
 
-        if (
-            request.include_kb
-            and request.kb_ids
-            and len(request.kb_ids) > 0
-        ):
-            exact_match = find_exact_kb_match(
-                request.kb_ids[0],
-                request.question
-            )
-
-        # --------------------------------
-        # VECTOR SEARCH
-        # --------------------------------
-        semantic_results = None
-
-        if request.include_kb and request.kb_ids:
-
-            semantic_results = query_kb_embeddings_filtered(
-                query_embedding,
-                request.kb_ids,
-                top_k=request.top_k
-            )
+        semantic_results = query_chart_embeddings(
+            query_embedding,
+            user_id="1",
+            profile_id="38",
+            chart_id="96",
+            top_k=20
+        )
 
         # --------------------------------
         # NOISE FILTER
         # --------------------------------
-
         import re
 
         def is_noise_chunk(text):
 
             text_lower = text.lower()
 
-            # obvious PDF garbage
             if "appendix" in text_lower:
                 return True
 
             if "contents" in text_lower:
                 return True
 
-            # count numbers
             numbers = re.findall(r"\d+", text)
 
-            # chunks full of page numbers/index entries
             if len(numbers) > 20:
                 return True
 
@@ -2868,17 +3181,58 @@ async def retrieval_test(request: RetrievalTestRequest):
 
             for match in semantic_results.matches:
 
-                text = match.metadata.get("text", "")
+                text = match.metadata.get(
+                    "text",
+                    ""
+                )
 
                 if not is_noise_chunk(text):
                     filtered_matches.append(match)
 
         # --------------------------------
-        # RERANKING
+        # DEBUG
+        # --------------------------------
+        if semantic_results:
+
+            print("\n===== ORIGINAL PINECONE =====")
+
+            for idx, match in enumerate(
+                semantic_results.matches[:20]
+            ):
+
+                print(
+                    idx + 1,
+                    round(match.score, 4),
+                    match.metadata.get(
+                        "text",
+                        ""
+                    )[:150]
+                )
+
+            print("\n===== AFTER NOISE FILTER =====")
+
+            for idx, match in enumerate(
+                filtered_matches[:20]
+            ):
+
+                print(
+                    idx + 1,
+                    round(match.score, 4),
+                    match.metadata.get(
+                        "text",
+                        ""
+                    )[:150]
+                )
+
+        # --------------------------------
+        # SIMPLE RERANKING
         # --------------------------------
 
         query_words = set(
-            request.question.lower().split()
+            re.findall(
+                r"[a-zA-Z]+",
+                request.question.lower()
+            )
         )
 
         reranked = []
@@ -2896,10 +3250,9 @@ async def retrieval_test(request: RetrievalTestRequest):
                 if len(word) > 3 and word in text
             )
 
-            final_score = (
-                match.score +
-                (overlap_score * 0.05)
-            )
+            final_score = match.score
+
+            final_score += overlap_score * 0.05
 
             reranked.append(
                 (final_score, match)
@@ -2916,62 +3269,30 @@ async def retrieval_test(request: RetrievalTestRequest):
         ]
 
         # --------------------------------
-        # FOUND RANKS
-        # --------------------------------
-
-        search_terms = [
-            "yupa yoga",
-            "vasumathi yoga"
-        ]
-
-        found_ranks = {}
-
-        for term in search_terms:
-
-            found_ranks[term] = None
-
-            for idx, match in enumerate(filtered_matches):
-
-                text = match.metadata.get(
-                    "text",
-                    ""
-                ).lower()
-
-                if term in text:
-
-                    found_ranks[term] = idx + 1
-                    break
-
-        # --------------------------------
         # RESPONSE
         # --------------------------------
 
         return {
+
             "status": "success",
 
-            "found_ranks": found_ranks,
-
             "question": request.question,
+
+            "hardcoded_chart": {
+                "user_id": "1",
+                "profile_id": "38",
+                "chart_id": "96"
+            },
 
             "embedding_dimension": len(
                 query_embedding
             ),
 
-            "exact_match_found":
-                exact_match is not None,
-
-            "exact_match_text":
-                exact_match.metadata.get(
-                    "text",
-                    ""
-                )[:500]
-                if exact_match
-                else None,
-
             "semantic_match_count":
                 len(filtered_matches),
 
             "semantic_matches": [
+
                 {
                     "rank": idx + 1,
 
@@ -2985,12 +3306,28 @@ async def retrieval_test(request: RetrievalTestRequest):
                             "file_id"
                         ),
 
+                    "user_id":
+                        match.metadata.get(
+                            "user_id"
+                        ),
+
+                    "profile_id":
+                        match.metadata.get(
+                            "profile_id"
+                        ),
+
+                    "chart_id":
+                        match.metadata.get(
+                            "chart_id"
+                        ),
+
                     "text":
                         match.metadata.get(
                             "text",
                             ""
                         )[:500]
                 }
+
                 for idx, match in enumerate(
                     filtered_matches[:10]
                 )
@@ -3003,3 +3340,28 @@ async def retrieval_test(request: RetrievalTestRequest):
             status_code=500,
             detail=str(e)
         )
+    
+
+# @app.get("/debug_chart_vectors")
+# def debug_chart_vectors():
+
+#     results = index.query(
+#         vector=[0.0] * 1536,
+#         top_k=100,
+#         include_metadata=True
+#     )
+
+#     chart_records = []
+
+#     for match in results.matches:
+
+#         metadata = match.metadata or {}
+
+#         if metadata.get("chart_id"):
+
+#             chart_records.append(metadata)
+
+#     return {
+#         "chart_count": len(chart_records),
+#         "samples": chart_records[:10]
+#     }

@@ -25,6 +25,8 @@ if INDEX_NAME not in [index.name for index in pc.list_indexes()]:
 index = pc.Index(INDEX_NAME)
 
 def upsert_embeddings(file_id, chunks, embeddings, metadata=None):
+    
+    print("METADATA RECEIVED:", metadata)
     vectors = []
 
     for i in range(len(chunks)):
@@ -68,26 +70,45 @@ def query_embeddings(query_embedding, top_k=5):
     return results
 
 
-def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=3):
+# def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=3):
+
+#     print("🔍 QUERY FILTER INPUT:", user_id, profile_id, chart_id)
+
+#     results = index.query(
+#         vector=query_embedding,
+#         top_k=top_k,
+#         include_metadata=True,
+#         filter={
+#             "user_id": str(user_id),
+#             "profile_id": str(profile_id),
+#             "chart_id": str(chart_id)
+#         }
+#     )
+
+#     print("RESULT COUNT:", len(results.matches))
+
+#     # Optional: print first result for inspection
+#     if results.matches:
+#         print("SAMPLE MATCH:", results.matches[0].metadata)
+
+#     return results
+
+def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=20):
 
     print("🔍 QUERY FILTER INPUT:", user_id, profile_id, chart_id)
 
     results = index.query(
         vector=query_embedding,
-        top_k=top_k,
-        include_metadata=True,
-        filter={
-            "user_id": str(user_id),
-            "profile_id": str(profile_id),
-            "chart_id": str(chart_id)
-        }
+        top_k=20,
+        include_metadata=True
     )
 
     print("RESULT COUNT:", len(results.matches))
 
-    # Optional: print first result for inspection
-    if results.matches:
-        print("SAMPLE MATCH:", results.matches[0].metadata)
+    for idx, match in enumerate(results.matches[:10]):
+
+        print(f"\nMATCH {idx+1}")
+        print(match.metadata)
 
     return results
 
