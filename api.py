@@ -2798,6 +2798,9 @@ def find_yoga(kb_id: str, yoga: str):
 async def retrieval_test(request: RetrievalTestRequest):
     try:
 
+        # --------------------------------
+        # EMBEDDING
+        # --------------------------------
         response = client.embeddings.create(
             model="text-embedding-3-small",
             input=request.question
@@ -2805,6 +2808,9 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         query_embedding = response.data[0].embedding
 
+        # --------------------------------
+        # EXACT MATCH
+        # --------------------------------
         exact_match = None
 
         if (
@@ -2817,6 +2823,9 @@ async def retrieval_test(request: RetrievalTestRequest):
                 request.question
             )
 
+        # --------------------------------
+        # VECTOR SEARCH
+        # --------------------------------
         semantic_results = None
 
         if request.include_kb and request.kb_ids:
@@ -2827,37 +2836,167 @@ async def retrieval_test(request: RetrievalTestRequest):
                 top_k=request.top_k
             )
 
+        # --------------------------------
+        # NOISE FILTER
+        # --------------------------------
+
+        def is_noise_chunk(text):
+
+            text = text.lower()
+
+            noise_keywords = [
+                "appendix",
+                "contents",
+                "page",
+                "yoga no.",
+                "page no."
+            ]
+
+            matches = sum(
+                1
+                for keyword in noise_keywords
+                if keyword in text
+            )
+
+            return matches >= 2
+
+        filtered_matches = []
+
+        if semantic_results:
+
+            for match in semantic_results.matches:
+
+                text = match.metadata.get("text", "")
+
+                if not is_noise_chunk(text):
+                    filtered_matches.append(match)
+
+        # --------------------------------
+        # RERANKING
+        # --------------------------------
+
+        query_words = set(
+            request.question.lower().split()
+        )
+
+        reranked = []
+
+        for match in filtered_matches:
+
+            text = match.metadata.get(
+                "text",
+                ""
+            ).lower()
+
+            overlap_score = sum(
+                1
+                for word in query_words
+                if len(word) > 3 and word in text
+            )
+
+            final_score = (
+                match.score +
+                (overlap_score * 0.05)
+            )
+
+            reranked.append(
+                (final_score, match)
+            )
+
+        reranked.sort(
+            key=lambda x: x[0],
+            reverse=True
+        )
+
+        filtered_matches = [
+            item[1]
+            for item in reranked
+        ]
+
+        # --------------------------------
+        # FOUND RANKS
+        # --------------------------------
+
+        search_terms = [
+            "yupa yoga",
+            "vasumathi yoga"
+        ]
+
+        found_ranks = {}
+
+        for term in search_terms:
+
+            found_ranks[term] = None
+
+            for idx, match in enumerate(filtered_matches):
+
+                text = match.metadata.get(
+                    "text",
+                    ""
+                ).lower()
+
+                if term in text:
+
+                    found_ranks[term] = idx + 1
+                    break
+
+        # --------------------------------
+        # RESPONSE
+        # --------------------------------
+
         return {
             "status": "success",
+
+            "found_ranks": found_ranks,
+
             "question": request.question,
 
-            "embedding_dimension": len(query_embedding),
+            "embedding_dimension": len(
+                query_embedding
+            ),
 
-            "exact_match_found": exact_match is not None,
+            "exact_match_found":
+                exact_match is not None,
 
             "exact_match_text":
-                exact_match.metadata.get("text", "")[:500]
+                exact_match.metadata.get(
+                    "text",
+                    ""
+                )[:500]
                 if exact_match
                 else None,
 
             "semantic_match_count":
-                len(semantic_results.matches)
-                if semantic_results
-                else 0,
+                len(filtered_matches),
 
             "semantic_matches": [
                 {
                     "rank": idx + 1,
-                    "score": round(match.score, 4),
-                    "text": match.metadata.get("text", "")[:500]
+
+                    "score": round(
+                        reranked[idx][0],
+                        4
+                    ),
+
+                    "file_id":
+                        match.metadata.get(
+                            "file_id"
+                        ),
+
+                    "text":
+                        match.metadata.get(
+                            "text",
+                            ""
+                        )[:500]
                 }
                 for idx, match in enumerate(
-                    semantic_results.matches[:10]
+                    filtered_matches[:10]
                 )
-            ] if semantic_results else []
+            ]
         }
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=str(e)
