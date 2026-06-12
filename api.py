@@ -2840,25 +2840,27 @@ async def retrieval_test(request: RetrievalTestRequest):
         # NOISE FILTER
         # --------------------------------
 
+        import re
+
         def is_noise_chunk(text):
 
-            text = text.lower()
+            text_lower = text.lower()
 
-            noise_keywords = [
-                "appendix",
-                "contents",
-                "page",
-                "yoga no.",
-                "page no."
-            ]
+            # obvious PDF garbage
+            if "appendix" in text_lower:
+                return True
 
-            matches = sum(
-                1
-                for keyword in noise_keywords
-                if keyword in text
-            )
+            if "contents" in text_lower:
+                return True
 
-            return matches >= 2
+            # count numbers
+            numbers = re.findall(r"\d+", text)
+
+            # chunks full of page numbers/index entries
+            if len(numbers) > 20:
+                return True
+
+            return False
 
         filtered_matches = []
 
