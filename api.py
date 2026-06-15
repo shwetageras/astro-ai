@@ -215,14 +215,11 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
         chunks = chunk_text(text)
 
-        print("\n========== FIRST CHUNK ==========")
-        print(chunks[0][:1500])
-
-        if len(chunks) > 1:
-            print("\n========== SECOND CHUNK ==========")
-            print(chunks[1][:1500])
-
         print("TOTAL CHUNKS:", len(chunks))
+
+        for i in range(min(5, len(chunks))):
+            print(f"\n========== CHUNK {i+1} ==========")
+            print(chunks[i][:1000])
 
         embeddings = create_embeddings(chunks)
         print("EMBEDDINGS:", len(embeddings))
