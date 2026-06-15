@@ -363,6 +363,10 @@ def build_context(chart_results, kb_results):
         for c in kb_data:
             context += f"- {c['text']}\n"
 
+    print("\n===== FINAL CONTEXT SENT TO GPT =====")
+    print(context)
+    print("===== END =====")
+
     return context[:3000]
 
 def get_max_tokens(question):
