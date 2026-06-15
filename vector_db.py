@@ -93,13 +93,13 @@ def query_embeddings(query_embedding, top_k=5):
 
 #     return results
 
-def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=3):
+def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=20):
 
     print("🔍 QUERY FILTER INPUT:", user_id, profile_id, chart_id)
 
     results = index.query(
         vector=query_embedding,
-        top_k=100,
+        top_k=20,   # reduce from 100
         include_metadata=True,
         filter={
             "user_id": str(user_id),
@@ -116,12 +116,16 @@ def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k
 
         md = match.metadata or {}
 
+        print(
+            f"\nMATCH {idx+1} | SCORE={match.score:.4f}"
+        )
+
+        print(
+            md.get("text", "")[:500]
+        )
+
         if md.get("chart_id"):
-
             chart_hits += 1
-
-            print("\nCHART VECTOR FOUND:")
-            print(md)
 
     print("TOTAL CHART HITS:", chart_hits)
 
