@@ -214,6 +214,14 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
         print("TEXT LENGTH:", len(text))
 
         chunks = chunk_text(text)
+
+        print("\n========== FIRST CHUNK ==========")
+        print(chunks[0][:1500])
+
+        if len(chunks) > 1:
+            print("\n========== SECOND CHUNK ==========")
+            print(chunks[1][:1500])
+
         print("TOTAL CHUNKS:", len(chunks))
 
         embeddings = create_embeddings(chunks)
@@ -3179,15 +3187,7 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         if semantic_results:
 
-            for match in semantic_results.matches:
-
-                text = match.metadata.get(
-                    "text",
-                    ""
-                )
-
-                if not is_noise_chunk(text):
-                    filtered_matches.append(match)
+            filtered_matches = semantic_results.matches
 
         # --------------------------------
         # DEBUG
@@ -3345,23 +3345,20 @@ async def retrieval_test(request: RetrievalTestRequest):
 # @app.get("/debug_chart_vectors")
 # def debug_chart_vectors():
 
+#     print("DEBUG ENDPOINT HIT")
+
 #     results = index.query(
 #         vector=[0.0] * 1536,
-#         top_k=100,
+#         top_k=10,
 #         include_metadata=True
 #     )
 
-#     chart_records = []
+#     print("MATCH COUNT:", len(results.matches))
 
-#     for match in results.matches:
-
-#         metadata = match.metadata or {}
-
-#         if metadata.get("chart_id"):
-
-#             chart_records.append(metadata)
+#     for i, match in enumerate(results.matches):
+#         print(f"MATCH {i+1}")
+#         print(match.metadata)
 
 #     return {
-#         "chart_count": len(chart_records),
-#         "samples": chart_records[:10]
+#         "match_count": len(results.matches)
 #     }
