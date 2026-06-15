@@ -198,6 +198,11 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
             with open(temp_file_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
+            print("TOP LEVEL KEYS:")
+            print(list(json_data.keys()))
+
+            print("TOTAL TOP LEVEL KEYS:", len(json_data.keys()))
+
             text = json.dumps(
                 json_data,
                 ensure_ascii=False,
