@@ -221,11 +221,16 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
                 f"Unsupported file type: {file_ext}"
             )
 
-        print("TEXT EXTRACTED")
-        print("TEXT LENGTH:", len(text))
-
         if file_ext != "json":
+
+            print("TEXT EXTRACTED")
+            print("TEXT LENGTH:", len(text))
+
             chunks = chunk_text(text)
+
+        else:
+
+            print("JSON CHUNKS CREATED")
 
         print("TOTAL CHUNKS:", len(chunks))
 
