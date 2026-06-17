@@ -203,11 +203,17 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
             print("TOTAL TOP LEVEL KEYS:", len(json_data.keys()))
 
-            text = json.dumps(
-                json_data,
-                ensure_ascii=False,
-                indent=2
-            )
+            chunks = []
+
+            for key, value in json_data.items():
+
+                chunk = json.dumps(
+                    {key: value},
+                    ensure_ascii=False,
+                    indent=2
+                )
+
+                chunks.append(chunk)
 
         else:
 
@@ -218,7 +224,8 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
         print("TEXT EXTRACTED")
         print("TEXT LENGTH:", len(text))
 
-        chunks = chunk_text(text)
+        if file_ext != "json":
+            chunks = chunk_text(text)
 
         print("TOTAL CHUNKS:", len(chunks))
 
