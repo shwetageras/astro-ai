@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from settings import OPENAI_MODEL, OPENAI_MINI_MODEL
 # from google import genai
 from storage import save_file, save_metadata
-from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
+from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb, chunk_json_text
 from notifier import notify_embedding_status
 from db import get_chart_details_bulk, soft_delete_chart_job, get_chart_job
 from db import insert_job, get_job, update_job
@@ -27,7 +27,6 @@ from vector_db import query_kb_embeddings_filtered
 from dotenv import load_dotenv
 import google.generativeai as genai
 from db import insert_qna_sl
-from kb_builder import client
 from prompts import build_prompt
 from db import update_qna_sl_validation, get_qna_sl
 from db import mark_qna_ml_ready
@@ -174,15 +173,15 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
     try:
         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
-        print("FILE SAVING START")
+        print("FILE SAVING START", flush=True)
 
         with open(temp_file_path, "wb") as f:
             f.write(file_bytes)
 
-        print("FILE SAVED")
+        print("FILE SAVED", flush=True)
 
         file_ext = file_name.split(".")[-1].lower()
-        print("FILE TYPE:", file_ext)
+        print("FILE TYPE:", file_ext, flush=True)
 
         if file_ext == "pdf":
 
@@ -213,7 +212,15 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
                     indent=2
                 )
 
-                chunks.append(chunk)
+                if len(chunk) > 10000:
+
+                    chunks.extend(
+                        chunk_json_text(chunk)
+                    )
+
+                else:
+
+                    chunks.append(chunk)
 
         else:
 
@@ -939,6 +946,8 @@ async def upload_chart(
         # Save to S3
         save_file(file_bytes, file_id)
 
+        print("ADDING BACKGROUND TASK", flush=True)
+
         background_tasks.add_task(
             process_chart,
             file_bytes,
@@ -950,6 +959,8 @@ async def upload_chart(
             profile_id,
             timestamp
         )
+
+        print("BACKGROUND TASK ADDED", flush=True)
 
     else:
         raise HTTPException(status_code=400, detail="Invalid isCharttype")
