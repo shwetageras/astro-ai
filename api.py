@@ -3190,6 +3190,14 @@ async def retrieval_test(request: RetrievalTestRequest):
             top_k=20
         )
 
+        TEST_KB_ID = "job_1779185466"
+
+        kb_results = query_kb_embeddings_filtered(
+            query_embedding,
+            [TEST_KB_ID],
+            top_k=20
+        )
+
         # --------------------------------
         # NOISE FILTER
         # --------------------------------
@@ -3216,7 +3224,13 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         if semantic_results:
 
-            filtered_matches = semantic_results.matches
+            filtered_matches = [
+                match
+                for match in semantic_results.matches
+                if not is_noise_chunk(
+                    match.metadata.get("text", "")
+                )
+            ]
 
         # --------------------------------
         # DEBUG
@@ -3297,9 +3311,76 @@ async def retrieval_test(request: RetrievalTestRequest):
             for item in reranked
         ]
 
+        chart_matches = filtered_matches
+
+        context = build_context(
+            chart_matches,
+            kb_results
+        )
+
         # --------------------------------
         # RESPONSE
         # --------------------------------
+
+        # return {
+
+        #     "status": "success",
+
+        #     "question": request.question,
+
+        #     "hardcoded_chart": {
+        #         "user_id": "2",
+        #         "profile_id": "45",
+        #         "chart_id": "105"
+        #     },
+
+        #     "embedding_dimension": len(
+        #         query_embedding
+        #     ),
+
+        #     "semantic_match_count":
+        #         len(filtered_matches),
+
+        #     "semantic_matches": [
+
+        #         {
+        #             "rank": idx + 1,
+
+        #             "score": round(
+        #                 reranked[idx][0],
+        #                 4
+        #             ),
+
+        #             "file_id":
+        #                 match.metadata.get(
+        #                     "file_id"
+        #                 ),
+
+        #             "user_id":
+        #                 match.metadata.get(
+        #                     "user_id"
+        #                 ),
+
+        #             "profile_id":
+        #                 match.metadata.get(
+        #                     "profile_id"
+        #                 ),
+
+        #             "chart_id":
+        #                 match.metadata.get(
+        #                     "chart_id"
+        #                 ),
+
+        #             "text":
+        #                 match.metadata.get(
+        #                     "text",
+        #                     ""
+        #                 )[:500]
+        #         }
+
+        #         for idx, match in enumerate(
+        #             filtered_matches[:10]
+        #         )
 
         return {
 
@@ -3313,56 +3394,35 @@ async def retrieval_test(request: RetrievalTestRequest):
                 "chart_id": "105"
             },
 
-            "embedding_dimension": len(
-                query_embedding
-            ),
+            "hardcoded_kb": TEST_KB_ID,
 
-            "semantic_match_count":
-                len(filtered_matches),
+            "embedding_dimension": len(query_embedding),
+
+            "chart_match_count": len(filtered_matches),
+
+            "kb_match_count": (
+                len(kb_results.matches)
+                if kb_results
+                else 0
+            ),
 
             "semantic_matches": [
 
                 {
                     "rank": idx + 1,
-
-                    "score": round(
-                        reranked[idx][0],
-                        4
-                    ),
-
-                    "file_id":
-                        match.metadata.get(
-                            "file_id"
-                        ),
-
-                    "user_id":
-                        match.metadata.get(
-                            "user_id"
-                        ),
-
-                    "profile_id":
-                        match.metadata.get(
-                            "profile_id"
-                        ),
-
-                    "chart_id":
-                        match.metadata.get(
-                            "chart_id"
-                        ),
-
-                    "text":
-                        match.metadata.get(
-                            "text",
-                            ""
-                        )[:500]
+                    "score": round(reranked[idx][0], 4),
+                    "file_id": match.metadata.get("file_id"),
+                    "text": match.metadata.get("text", "")[:500]
                 }
 
                 for idx, match in enumerate(
                     filtered_matches[:10]
                 )
-            ]
-        }
+            ],
 
+            "context": context
+        }
+        
     except Exception as e:
 
         raise HTTPException(
