@@ -3184,9 +3184,9 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         semantic_results = query_chart_embeddings(
             query_embedding,
-            user_id="1",
-            profile_id="42",
-            chart_id="102",
+            user_id="2",
+            profile_id="45",
+            chart_id="105",
             top_k=20
         )
 
@@ -3308,9 +3308,9 @@ async def retrieval_test(request: RetrievalTestRequest):
             "question": request.question,
 
             "hardcoded_chart": {
-                "user_id": "1",
-                "profile_id": "38",
-                "chart_id": "96"
+                "user_id": "2",
+                "profile_id": "45",
+                "chart_id": "105"
             },
 
             "embedding_dimension": len(
