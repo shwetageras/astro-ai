@@ -149,6 +149,9 @@ def delete_embeddings(file_id):
     )
 
 def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=50):
+
+    print("KB IDS RECEIVED:", kb_ids)
+
     results = index.query(
         vector=query_embedding,
         top_k=top_k,
@@ -157,6 +160,9 @@ def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=50):
             "file_id": {"$in": kb_ids}
         }
     )
+
+    print("KB MATCHES FOUND:", len(results.matches))
+    
     return results
 
 
