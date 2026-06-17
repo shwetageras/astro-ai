@@ -3190,7 +3190,7 @@ async def retrieval_test(request: RetrievalTestRequest):
             top_k=20
         )
 
-        TEST_KB_ID = "job_1781691372"
+        TEST_KB_ID = "1781691372_300_combination"
 
         kb_results = query_kb_embeddings_filtered(
             query_embedding,
