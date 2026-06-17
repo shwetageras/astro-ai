@@ -3162,8 +3162,8 @@ async def retrieval_test(request: RetrievalTestRequest):
         semantic_results = query_chart_embeddings(
             query_embedding,
             user_id="1",
-            profile_id="38",
-            chart_id="96",
+            profile_id="42",
+            chart_id="102",
             top_k=20
         )
 
