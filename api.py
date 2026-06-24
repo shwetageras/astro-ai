@@ -244,6 +244,21 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
                     indent=2
                 )
 
+                if key == "05_planets_in_houses":
+
+                    chunks.append(
+                        original_chunk
+                    )
+
+                    for planet, house in value.items():
+
+                        chunks.append(
+                            f"{planet} is placed in house {house}\n"
+                            f"House {house} contains {planet}"
+                        )
+
+                    continue
+
                 semantic_lines = json_to_semantic_text(
                     {key: value}
                 )
@@ -3256,11 +3271,11 @@ async def retrieval_test(request: RetrievalTestRequest):
             query_embedding,
             user_id="2",
             profile_id="45",
-            chart_id="113",
+            chart_id="114",
             top_k=20
         )
 
-        TEST_KB_ID = "1782288455_300_combination"
+        TEST_KB_ID = "1782292959_300_combination"
 
         kb_results = query_kb_embeddings_filtered(
             query_embedding,
