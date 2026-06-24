@@ -352,7 +352,7 @@ def build_context(chart_results, kb_results):
     all_chunks_backup = all_chunks.copy()
 
     # -------- Step 3: Filter by threshold --------
-    SCORE_THRESHOLD = 0.70
+    SCORE_THRESHOLD = 0.45
 
     filtered_chunks = [c for c in all_chunks if c["score"] >= SCORE_THRESHOLD]
 
