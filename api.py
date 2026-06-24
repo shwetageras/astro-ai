@@ -3167,6 +3167,14 @@ class RetrievalTestRequest(BaseModel):
 async def retrieval_test(request: RetrievalTestRequest):
     try:
 
+        print("\n========== RETRIEVAL TEST REQUEST ==========")
+        print("QUESTION:", request.question)
+
+        print("REQUEST DICT:")
+        print(request.dict())
+
+        print("===========================================")
+
         # --------------------------------
         # EMBEDDING
         # --------------------------------
