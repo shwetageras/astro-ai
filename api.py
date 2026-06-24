@@ -206,11 +206,27 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
             for key, value in json_data.items():
 
-                chunk = json.dumps(
+                original_chunk = json.dumps(
                     {key: value},
                     ensure_ascii=False,
                     indent=2
                 )
+
+                semantic_text = ""
+
+                if key == "05_planets_in_houses":
+
+                    lines = []
+
+                    for planet, house in value.items():
+
+                        lines.append(
+                            f"{planet} is placed in house {house}"
+                        )
+
+                    semantic_text = "\n".join(lines)
+
+                chunk = original_chunk + "\n\n" + semantic_text
 
                 if len(chunk) > 10000:
 
