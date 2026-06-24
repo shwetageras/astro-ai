@@ -3272,7 +3272,7 @@ async def retrieval_test(request: RetrievalTestRequest):
             query_embedding,
             user_id="2",
             profile_id="45",
-            chart_id="114",
+            chart_id="115",
             top_k=20
         )
 
