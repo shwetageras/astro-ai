@@ -3230,11 +3230,11 @@ async def retrieval_test(request: RetrievalTestRequest):
             query_embedding,
             user_id="2",
             profile_id="45",
-            chart_id="105",
+            chart_id="113",
             top_k=20
         )
 
-        TEST_KB_ID = "1781691372_300_combination"
+        TEST_KB_ID = "1782288455_300_combination"
 
         kb_results = query_kb_embeddings_filtered(
             query_embedding,
