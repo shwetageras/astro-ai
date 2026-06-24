@@ -254,6 +254,7 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
                         chunks.append(
                             f"{planet} is placed in house {house}\n"
+                            f"{planet} is in the {house}th house\n"
                             f"House {house} contains {planet}"
                         )
 
