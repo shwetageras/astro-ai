@@ -339,6 +339,16 @@ def build_context(chart_results, kb_results):
 
     # -------- Step 2: Sort globally --------
     all_chunks.sort(key=lambda x: x["score"], reverse=True)
+
+    print("\n===== TOP CHUNKS AFTER GLOBAL SORT =====")
+
+    for c in all_chunks[:15]:
+        print(
+            c["source"],
+            round(c["score"], 4),
+            c["text"][:100]
+        )
+
     all_chunks_backup = all_chunks.copy()
 
     # -------- Step 3: Filter by threshold --------
@@ -348,7 +358,7 @@ def build_context(chart_results, kb_results):
 
     # Fallback if nothing passes threshold
     if not filtered_chunks:
-        filtered_chunks = all_chunks_backup[:15]   # take top 5 anyway
+        filtered_chunks = all_chunks_backup[:15]   # take top 15 anyway
 
     all_chunks = filtered_chunks
 
@@ -385,6 +395,16 @@ def build_context(chart_results, kb_results):
     print("\n===== FINAL CONTEXT SENT TO GPT =====")
     print(context)
     print("===== END =====")
+
+    print(
+        "FINAL CHART CHUNKS:",
+        len(chart_data)
+    )
+
+    print(
+        "FINAL KB CHUNKS:",
+        len(kb_data)
+    )
 
     return context[:3000]
 
