@@ -167,6 +167,38 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
 #         if os.path.exists(temp_file_path):
 #             os.remove(temp_file_path)
 
+
+def json_to_semantic_text(data, prefix=""):
+
+    lines = []
+
+    if isinstance(data, dict):
+
+        for k, v in data.items():
+
+            current = f"{prefix} {k}".strip()
+
+            lines.extend(
+                json_to_semantic_text(v, current)
+            )
+
+    elif isinstance(data, list):
+
+        for item in data:
+
+            lines.extend(
+                json_to_semantic_text(item, prefix)
+            )
+
+    else:
+
+        lines.append(
+            f"{prefix} is {data}"
+        )
+
+    return lines
+
+
 def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
 
     print("🚀 PROCESS_CHART STARTED", flush=True)
@@ -212,19 +244,13 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
                     indent=2
                 )
 
-                semantic_text = ""
+                semantic_lines = json_to_semantic_text(
+                    {key: value}
+                )
 
-                if key == "05_planets_in_houses":
-
-                    lines = []
-
-                    for planet, house in value.items():
-
-                        lines.append(
-                            f"{planet} is placed in house {house}"
-                        )
-
-                    semantic_text = "\n".join(lines)
+                semantic_text = "\n".join(
+                    semantic_lines
+                )
 
                 chunk = original_chunk + "\n\n" + semantic_text
 
