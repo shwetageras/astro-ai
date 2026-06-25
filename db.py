@@ -1,13 +1,21 @@
+import os
+from dotenv import load_dotenv
 import psycopg2
+
+load_dotenv()
 
 def get_connection():
     conn = psycopg2.connect(
-        host="localhost",
-        database="astro_ai_db",
-        user="postgres",
-        password="postgres123"  # replace if different
+        host=os.getenv("DB_HOST"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD")
     )
     return conn
+
+# -------------------------------
+# JOB FUNCTIONS
+# -------------------------------
 
 def insert_job(job_id, file_id, file_name, status, created_at):
     conn = get_connection()
@@ -206,16 +214,8 @@ def update_qna_answer(qna_id, answer):
 
 def get_chart_details_bulk(job_ids):
     from psycopg2.extras import RealDictCursor
-    import psycopg2
 
-    conn = psycopg2.connect(
-        dbname="astro_ai_db",
-        user="postgres",
-        password="postgres123",
-        host="localhost",
-        port="5432"
-    )
-
+    conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     query = """
@@ -376,25 +376,35 @@ def insert_generated_qna(kb_id, question, answer):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT INTO generated_qnas (
-            kb_id,
-            question,
-            answer,
-            created_at
+    try:
+
+        cursor.execute(
+            """
+            INSERT INTO generated_qnas (
+                kb_id,
+                question,
+                answer,
+                created_at
+            )
+            VALUES (%s, %s, %s, EXTRACT(EPOCH FROM NOW())::BIGINT)
+            RETURNING id
+            """,
+            (kb_id, question, answer)
         )
-        VALUES (%s, %s, %s, EXTRACT(EPOCH FROM NOW())::BIGINT)
-        RETURNING id
-    """, (kb_id, question, answer))
 
-    row = cursor.fetchone()
+        row = cursor.fetchone()
 
-    conn.commit()
+        if row is None:
+            raise Exception("Insert failed: No ID returned")
 
-    cursor.close()
-    conn.close()
+        conn.commit()
 
-    return row[0]
+        return row[0]
+
+    finally:
+
+        cursor.close()
+        conn.close()
 
 
 def get_file_id_from_job(job_id):

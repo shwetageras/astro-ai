@@ -102,7 +102,7 @@ def create_embeddings(chunks):
     all_embeddings = []
 
     for i in range(0, len(chunks), BATCH_SIZE):
-        batch = chunks[i:i+BATCH_SIZE]
+        batch = chunks[i:i + BATCH_SIZE]
 
         response = client.embeddings.create(
             model="text-embedding-3-small",
@@ -118,14 +118,16 @@ def create_embeddings(chunks):
 # BUILD KB
 # -------------------------------
 def build_kb(chunks, embeddings):
+
     kb = []
-    
-    for i in range(len(chunks)):
+
+    for chunk, embedding in zip(chunks, embeddings):
+
         kb.append({
-            "text": chunks[i],
-            "embedding": embeddings[i]
+            "text": chunk,
+            "embedding": embedding
         })
-    
+
     return kb
 
 
@@ -142,21 +144,21 @@ def save_kb(kb, file_id):
     # 🔥 NEW: metadata calculation
     num_chunks = len(kb)
 
-    # each float ~ 4 bytes (approximation)
-    embedding_size_bytes = sum(len(item["embedding"]) * 4 for item in kb)
+    # Approximate embedding size (assuming ~4 bytes per float)
+    estimated_embedding_size_bytes = sum(len(item["embedding"]) * 4 for item in kb)
 
     # 🔥 NEW: wrap with metadata
     kb_with_metadata = {
         "metadata": {
             "num_chunks": num_chunks,
-            "embedding_size_bytes": embedding_size_bytes
+            "estimated_embedding_size_bytes": estimated_embedding_size_bytes
         },
         "data": kb
     }
 
     # Save locally (optional)
-    with open(file_path, "w") as f:
-        json.dump(kb_with_metadata, f, indent=2)
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(kb_with_metadata, f, indent=2, ensure_ascii=False)
 
     # 🔥 Upload to S3
     save_kb_to_s3(kb_with_metadata, file_id)

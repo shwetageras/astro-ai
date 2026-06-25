@@ -17,7 +17,7 @@ def generate_qnas(kb_id):
     file_id = get_file_id_from_job(kb_id)
 
     if not file_id:
-        raise Exception("Invalid job_id")
+        raise ValueError("Invalid job_id")
 
     print("FILE ID:", file_id)
 
@@ -78,15 +78,18 @@ def generate_qnas(kb_id):
     content = response.choices[0].message.content
 
     if not content:
-        raise Exception("Empty response from GPT")
+        raise ValueError("Empty response from GPT")
 
     print("RAW GPT RESPONSE:")
     print(content)
 
-    parsed = json.loads(content)
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON returned by GPT: {e}")
 
     if "qnas" not in parsed:
-        raise Exception("Invalid GPT response format")
+        raise ValueError("Invalid GPT response format")
     
     # -----------------------------------
     # STEP 6: RETURN QNAS

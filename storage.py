@@ -2,6 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 import boto3
+
 load_dotenv()
 
 s3 = boto3.client(
@@ -11,7 +12,7 @@ s3 = boto3.client(
     region_name=os.getenv("AWS_REGION")
 )
 
-BUCKET_NAME = "xtrology-genai-data"
+BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
 def save_metadata(file_id, file_name, upload_time):
     
@@ -20,7 +21,7 @@ def save_metadata(file_id, file_name, upload_time):
     # If file exists, load existing data
     if os.path.exists(metadata_file):
         try:
-            with open(metadata_file, "r") as f:
+            with open(metadata_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except json.JSONDecodeError:
             data = []   # file exists but empty/corrupt
@@ -35,8 +36,8 @@ def save_metadata(file_id, file_name, upload_time):
     })
     
     # Save back
-    with open(metadata_file, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(metadata_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def save_file(file_bytes, file_id):
@@ -59,7 +60,10 @@ def save_kb_to_s3(kb_data, file_id):
     import io
 
     # convert JSON to bytes
-    json_bytes = json.dumps(kb_data).encode("utf-8")
+    json_bytes = json.dumps(
+        kb_data,
+        ensure_ascii=False
+    ).encode("utf-8")
 
     file_obj = io.BytesIO(json_bytes)
 

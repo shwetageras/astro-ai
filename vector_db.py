@@ -70,36 +70,13 @@ def query_embeddings(query_embedding, top_k=5):
     return results
 
 
-# def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=3):
-
-#     print("🔍 QUERY FILTER INPUT:", user_id, profile_id, chart_id)
-
-#     results = index.query(
-#         vector=query_embedding,
-#         top_k=top_k,
-#         include_metadata=True,
-#         filter={
-#             "user_id": str(user_id),
-#             "profile_id": str(profile_id),
-#             "chart_id": str(chart_id)
-#         }
-#     )
-
-#     print("RESULT COUNT:", len(results.matches))
-
-#     # Optional: print first result for inspection
-#     if results.matches:
-#         print("SAMPLE MATCH:", results.matches[0].metadata)
-
-#     return results
-
 def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k=20):
 
     print("🔍 QUERY FILTER INPUT:", user_id, profile_id, chart_id)
 
     results = index.query(
         vector=query_embedding,
-        top_k=20,   # reduce from 100
+        top_k=top_k,   
         include_metadata=True,
         filter={
             "user_id": str(user_id),
@@ -132,17 +109,6 @@ def query_chart_embeddings(query_embedding, user_id, profile_id, chart_id, top_k
     return results
 
 
-def query_kb_embeddings(query_embedding, top_k=2):
-    results = index.query(
-        vector=query_embedding,
-        top_k=top_k,
-        include_metadata=True,
-        filter={
-            "user_id": {"$exists": False}
-        }
-    )
-    return results
-
 def delete_embeddings(file_id):
     index.delete(
         filter={"file_id": file_id}
@@ -162,6 +128,16 @@ def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=50):
     )
 
     print("KB MATCHES FOUND:", len(results.matches))
+
+    for idx, match in enumerate(results.matches):
+
+        print(
+            f"\nKB MATCH {idx+1} | SCORE={match.score:.4f}"
+        )
+
+        print(
+            match.metadata.get("text", "")[:500]
+        )
     
     return results
 

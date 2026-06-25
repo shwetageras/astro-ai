@@ -1,10 +1,11 @@
 import time
 import uuid
 import os
+import re
 import json
 import requests
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
-from settings import OPENAI_MODEL, OPENAI_MINI_MODEL
+from settings import OPENAI_MODEL, OPENAI_MINI_MODEL, GEMINI_MODEL
 # from google import genai
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb, chunk_json_text
@@ -14,20 +15,17 @@ from db import insert_job, get_job, update_job
 from vector_db import upsert_embeddings
 from vector_db import query_embeddings
 from kb_builder import client
-from fastapi import Form
 from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
-from vector_db import query_chart_embeddings, query_kb_embeddings
+from vector_db import query_chart_embeddings
 from db import insert_qna, update_qna_answer
 from fastapi import HTTPException
 from vector_db import delete_embeddings
 from prompts import build_prompt
 from typing import List, Optional
 from vector_db import query_kb_embeddings_filtered
-from dotenv import load_dotenv
 import google.generativeai as genai
 from db import insert_qna_sl
-from prompts import build_prompt
 from db import update_qna_sl_validation, get_qna_sl
 from db import mark_qna_ml_ready
 from pydantic import BaseModel
@@ -36,11 +34,7 @@ from qna_generator import generate_qnas
 from db import delete_qna_record
 from vector_db import delete_qna_embeddings
 from vector_db import get_all_kb_chunks
-# from prompts import build_welcome_prompt
-from vector_db import index
 
-
-# load_dotenv()
 
 genai.configure(
     api_key=os.getenv("GEMINI_API_KEY")
@@ -53,6 +47,9 @@ def make_safe_filename(name: str):
 
 # BACKGROUND FUNCTION FOR upload_pdf
 def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
+    
+    temp_file_path = None
+
     try:
         # Create temp file
         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
@@ -100,72 +97,8 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
 
     finally:
         # Cleanup temp file
-        if os.path.exists(temp_file_path):
+        if temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
-
-
-# BACKGROUND FUNCTION FOR upload_chart
-# def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
-    
-#     print("🚀 PROCESS_CHART STARTED", flush=True)
-
-#     try:
-#         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
-
-#         with open(temp_file_path, "wb") as f:
-#             f.write(file_bytes)
-
-#         # SAME pipeline as PDF
-#         file_ext = file_name.split(".")[-1].lower()
-
-#         if file_ext == "pdf":
-#             text = read_pdf(temp_file_path)
-
-#         elif file_ext in ["md", "txt"]:
-#             from kb_builder import read_text_file
-#             text = read_text_file(temp_file_path)
-
-#         else:
-#             raise Exception(f"Unsupported file type: {file_ext}")
-
-#         chunks = chunk_text(text)
-#         print("✅ CHUNKS:", len(chunks))
-
-#         embeddings = create_embeddings(chunks)
-#         print("✅ EMBEDDINGS:", len(embeddings))
-
-#         # Add metadata (IMPORTANT)
-#         upsert_embeddings(
-#             file_id,
-#             chunks,
-#             embeddings,
-#             metadata={
-#                 "chart_id": str(chart_id),
-#                 "user_id": str(user_id),
-#                 "profile_id": str(profile_id)
-#             }
-#         )
-
-#         print("✅ UPSERT DONE")
-
-#         kb = build_kb(chunks, embeddings)
-#         save_kb(kb, file_id)
-
-#         save_metadata(file_id, file_name, int(time.time()))
-
-#         # Update DB
-#         update_chart_job(job_id, "completed", int(time.time()))
-
-#         # 🔥 CALLBACK
-#         notify_chart_status(job_id, chart_id, file_id)
-
-#     except Exception as e:
-#         print(f"Error in chart job {job_id}: {e}")
-#         update_chart_job(job_id, "failed", int(time.time()), str(e))
-
-#     finally:
-#         if os.path.exists(temp_file_path):
-#             os.remove(temp_file_path)
 
 
 def json_to_semantic_text(data, prefix=""):
@@ -202,6 +135,9 @@ def json_to_semantic_text(data, prefix=""):
 def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, profile_id, timestamp):
 
     print("🚀 PROCESS_CHART STARTED", flush=True)
+
+
+    temp_file_path = None
 
     try:
         temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
@@ -282,7 +218,7 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
 
         else:
 
-            raise Exception(
+            raise ValueError(
                 f"Unsupported file type: {file_ext}"
             )
 
@@ -340,11 +276,21 @@ def process_chart(file_bytes, file_id, file_name, job_id, chart_id, user_id, pro
         print("CALLBACK SENT")
 
     except Exception as e:
+
         print(f"❌ ERROR in chart job {job_id}: {e}")
 
+        update_chart_job(
+            job_id,
+            "failed",
+            int(time.time()),
+            str(e)
+        )
+
     finally:
-        if os.path.exists(temp_file_path):
+
+        if temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
 
 def is_similar(text1, text2, threshold=0.8):
     # Simple similarity using overlap
@@ -372,13 +318,6 @@ def build_context(chart_results, kb_results):
             "source": "chart"
         })
 
-    # if kb_results:
-    #     for match in kb_results.matches:
-    #         all_chunks.append({
-    #             "score": match.score,
-    #             "text": match.metadata.get("text", ""),
-    #             "source": "kb"
-    #         })
 
     if kb_results:
 
@@ -411,6 +350,8 @@ def build_context(chart_results, kb_results):
 
     # -------- Step 3: Filter by threshold --------
     SCORE_THRESHOLD = 0.45
+    MAX_CONTEXT_CHUNKS = 6
+    MAX_CONTEXT_CHARS = 3000
 
     filtered_chunks = [c for c in all_chunks if c["score"] >= SCORE_THRESHOLD]
 
@@ -427,7 +368,7 @@ def build_context(chart_results, kb_results):
         if not any(is_similar(chunk["text"], s["text"]) for s in selected):
             selected.append(chunk)
 
-        if len(selected) >= 6:   # total context size cap
+        if len(selected) >= MAX_CONTEXT_CHUNKS:
             break
 
     # -------- Step 5: Separate again (for structure) --------
@@ -443,12 +384,12 @@ def build_context(chart_results, kb_results):
     if chart_data:
         context += "CHART DATA:\n"
         for c in chart_data:
-            context += f"- {c['text']}\n"
+            context += f"- {c['text'].strip()}\n"
 
     if kb_data:
         context += "\nKNOWLEDGE BASE:\n"
         for c in kb_data:
-            context += f"- {c['text']}\n"
+            context += f"- {c['text'].strip()}\n"
 
     print("\n===== FINAL CONTEXT SENT TO GPT =====")
     print(context)
@@ -464,7 +405,8 @@ def build_context(chart_results, kb_results):
         len(kb_data)
     )
 
-    return context[:3000]
+    return context[:MAX_CONTEXT_CHARS]
+
 
 def get_max_tokens(question):
 
@@ -483,20 +425,33 @@ def get_max_tokens(question):
 def generate_answer(question, context):
 
     prompt = build_prompt(question, context)
-    
+
     max_tokens_value = get_max_tokens(question)
 
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        temperature=0.2,
-        max_tokens=max_tokens_value,
-        messages=[
-            {"role": "system", "content": "You are a careful and reasoning-based astrologer."},
-            {"role": "user", "content": prompt}
-        ]
-    )
+    try:
 
-    return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            temperature=0.2,
+            max_tokens=max_tokens_value,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a careful and reasoning-based astrologer."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+
+        print("❌ OPENAI ERROR:", str(e))
+        raise
 
 def generate_answer_gpt_mini(question, context):
 
@@ -504,53 +459,37 @@ def generate_answer_gpt_mini(question, context):
 
     max_tokens_value = get_max_tokens(question)
 
-    response = client.chat.completions.create(
-        model=OPENAI_MINI_MODEL,
-        temperature=0.2,
-        max_tokens=max_tokens_value,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a careful and reasoning-based astrologer."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
+    try:
 
-    return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model=OPENAI_MINI_MODEL,
+            temperature=0.2,
+            max_tokens=max_tokens_value,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a careful and reasoning-based astrologer."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
 
+        return response.choices[0].message.content
 
-# def generate_welcome_message(context, user_name="User"):
+    except Exception as e:
 
-#     prompt = build_welcome_prompt(context, user_name)
-
-#     response = client.chat.completions.create(
-#         model="gpt-4.1-mini",
-#         temperature=0.7,
-#         max_tokens=180,
-#         messages=[
-#             {
-#                 "role": "system",
-#                 "content": "You are a warm and thoughtful Vedic astrologer."
-#             },
-#             {
-#                 "role": "user",
-#                 "content": prompt
-#             }
-#         ]
-#     )
-
-#     return (response.choices[0].message.content or "").strip()
+        print("❌ GPT MINI ERROR:", str(e))
+        raise
 
 
 def generate_answer_gemini(question, context):
     prompt = build_prompt(question, context)
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel(GEMINI_MODEL)
         response = model.generate_content(prompt)
 
         from typing import cast
@@ -565,14 +504,15 @@ def generate_answer_gemini(question, context):
                 candidate_text = response.candidates[0].content.parts[0].text
                 if isinstance(candidate_text, str):
                     return candidate_text.strip()
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError, TypeError):
                 pass
 
-        return "⚠️ Empty Gemini response"
+        raise ValueError("Gemini returned an empty response.")
 
     except Exception as e:
+
         print("❌ GEMINI ERROR:", str(e))
-        return f"Gemini error: {str(e)}"
+        raise
 
 
 def process_text(text, file_id, file_name, job_id, timestamp):
@@ -599,64 +539,15 @@ def process_text(text, file_id, file_name, job_id, timestamp):
         update_job(job_id, "failed", int(time.time()), str(e))
 
 
-# def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
-
-#     print("PROCESS_CHART STARTED", flush=True)
-
-#     try:
-#         print("PROCESS START:", job_id)
-
-#         # Step 1: Chunk
-#         chunks = chunk_text(content)
-#         print("✅ CHUNKS:", len(chunks))
-
-#         # Step 2: Embeddings
-#         embeddings = create_embeddings(chunks)
-#         print("✅ EMBEDDINGS:", len(embeddings))
-
-#         # Step 3: Store in Pinecone
-#         upsert_embeddings(
-#             file_id,
-#             chunks,
-#             embeddings,
-#             metadata={
-#                 "chart_id": str(chart_id),
-#                 "user_id": str(user_id),
-#                 "profile_id": str(profile_id)
-#             }
-#         )
-
-#         print("✅ UPSERT DONE")
-
-#         # Step 4: Build KB (IMPORTANT)
-#         kb = build_kb(chunks, embeddings)
-#         save_kb(kb, file_id)
-
-#         # Step 5: Save metadata
-#         save_metadata(file_id, "chart_text", int(time.time()))
-
-#         # Step 6: Update correct DB
-#         update_chart_job(job_id, "completed", int(time.time()))
-
-#         # Step 7: Notify UI
-#         notify_chart_status(job_id, chart_id, file_id)
-
-#         print("PROCESS COMPLETE:", job_id)
-
-#     except Exception as e:
-#         print("❌ ERROR:", str(e))
-#         update_chart_job(job_id, "failed", int(time.time()), str(e))
-
-
 def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
 
     print("PROCESS_CHART_TEXT STARTED", flush=True)
 
     try:
-        print("CONTENT RECEIVED")
+        print("CONTENT LENGTH:", len(content))
 
         print("\n========== RAW CHART CONTENT ==========")
-        print(content[:10000])
+        print(content[:2000])
         print("=======================================")
 
         # Step 1: Chunk
@@ -772,7 +663,6 @@ def find_exact_kb_match(kb_id, question):
 
     return best_match
 
-from pydantic import BaseModel
 
 class QueryRequest(BaseModel):
     query: str
@@ -831,20 +721,22 @@ class DeleteQnaSLRequest(BaseModel):
     qna_id: int
 
 
-# class RetrievalTestRequest(BaseModel):
-#     question: str
+class RetrievalTestRequest(BaseModel):
 
-#     kb_ids: Optional[list[str]] = None
+    question: str
 
-#     user_id: Optional[str] = None
-#     profile_id: Optional[str] = None
-#     chart_id: Optional[str] = None
+    chart_ids: List[str] = []
+    kb_id: List[str] = []
+    sl_id: List[str] = []
 
-#     include_kb: bool = True
-#     include_chart: bool = False
-#     include_sl: bool = False
+    previous_question: Optional[str] = None
+    previous_answer: Optional[str] = None
 
-#     top_k: int = 50
+    include_chart: bool = True
+    include_kb: bool = True
+    include_sl: bool = True
+
+    top_k: int = 20
 
 
 
@@ -1085,7 +977,6 @@ def ask_question(request: QuestionRequest):
     ttl_sl_match = 0
     ttl_kb_context = 0
     ttl_chart_context = 0
-    ttl_prompt = 0
     ttl_reasoning = 0
     ttl_delivery = 0
 
@@ -1183,23 +1074,6 @@ def ask_question(request: QuestionRequest):
     # 🔍 DEBUG
     print("USING SL CONTEXT:", use_sl_as_context)
 
-    # chart_ids = request.chart_ids
-    # kb_ids = request.kb_id
-
-    # # Safety: ensure list
-    # if isinstance(chart_ids, str):
-    #     chart_ids = [chart_ids]
-
-    # if isinstance(kb_ids, str):
-    #     kb_ids = [kb_ids]
-
-    # def is_valid_ids(ids):
-    #     return ids and ids != ["0"] and ids != [""]
-
-    # use_chart = is_valid_ids(chart_ids)
-    # use_kb = is_valid_ids(kb_ids)
-
-
     # -------------------------------
     # STEP 1: INIT
     # -------------------------------
@@ -1260,29 +1134,10 @@ def ask_question(request: QuestionRequest):
         2
     )
 
-    # -------------------------------
-    # TEST EXACT MATCH
-    # -------------------------------
-
-    if kb_ids:
-
-        test_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
-
-        print("TEST MATCH FOUND:", test_match is not None)
 
     # -------------------------------
     # STEP 5: KB RETRIEVAL
     # -------------------------------
-    # kb_results = None
-
-    # if use_kb:
-    #     if "job_n" in kb_ids:
-    #         kb_results = query_kb_embeddings(query_embedding, top_k=10)
-    #     else:
-    #         kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
 
     kb_results = None
 
@@ -1319,16 +1174,6 @@ def ask_question(request: QuestionRequest):
     # -------------------------------
     # STEP 6: DEBUG
     # -------------------------------
-    # print("\n================ RETRIEVAL DEBUG ================")
-
-    # print("\n--- CHART RESULTS (Merged) ---")
-    # for match in all_chart_matches:
-    #     print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    # print("\n--- KB RESULTS ---")
-    # if kb_results:
-    #     for match in kb_results.matches:
-    #         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     print("\n--- KB RESULTS ---")
 
@@ -1443,7 +1288,7 @@ def ask_question(request: QuestionRequest):
         },
         {
             "stage": "ttl_context_build",
-            "time_ms": ttl_prompt
+            "time_ms": ttl_context_build
         },
         {
             "stage": "ttl_reasoning",
@@ -1593,22 +1438,6 @@ def qna_gpt_mini(request: QuestionRequest):
     # 🔍 DEBUG
     print("USING SL CONTEXT:", use_sl_as_context)
 
-    # chart_ids = request.chart_ids
-    # kb_ids = request.kb_id
-
-    # # Safety: ensure list
-    # if isinstance(chart_ids, str):
-    #     chart_ids = [chart_ids]
-
-    # if isinstance(kb_ids, str):
-    #     kb_ids = [kb_ids]
-
-    # def is_valid_ids(ids):
-    #     return ids and ids != ["0"] and ids != [""]
-
-    # use_chart = is_valid_ids(chart_ids)
-    # use_kb = is_valid_ids(kb_ids)
-
 
     # -------------------------------
     # STEP 1: INIT
@@ -1656,29 +1485,10 @@ def qna_gpt_mini(request: QuestionRequest):
             )
             all_chart_matches.extend(results.matches)
 
-    # -------------------------------
-    # TEST EXACT MATCH
-    # -------------------------------
-
-    if kb_ids:
-
-        test_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
-
-        print("TEST MATCH FOUND:", test_match is not None)
 
     # -------------------------------
     # STEP 5: KB RETRIEVAL
     # -------------------------------
-    # kb_results = None
-
-    # if use_kb:
-    #     if "job_n" in kb_ids:
-    #         kb_results = query_kb_embeddings(query_embedding, top_k=10)
-    #     else:
-    #         kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
 
     kb_results = None
 
@@ -1708,16 +1518,6 @@ def qna_gpt_mini(request: QuestionRequest):
     # -------------------------------
     # STEP 6: DEBUG
     # -------------------------------
-    # print("\n================ RETRIEVAL DEBUG ================")
-
-    # print("\n--- CHART RESULTS (Merged) ---")
-    # for match in all_chart_matches:
-    #     print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    # print("\n--- KB RESULTS ---")
-    # if kb_results:
-    #     for match in kb_results.matches:
-    #         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     print("\n--- KB RESULTS ---")
 
@@ -1842,7 +1642,6 @@ def qna_gemini(request: QuestionRequest):
     ttl_sl_match = 0
     ttl_kb_context = 0
     ttl_chart_context = 0
-    ttl_prompt = 0
     ttl_reasoning = 0
     ttl_delivery = 0
     
@@ -1859,8 +1658,6 @@ def qna_gemini(request: QuestionRequest):
                 kb_id=kb_id
             )
         )
-
-        print("SL RESULT RAW:", sl_result)
 
         ttl_sl_match = round(
             (time.perf_counter() - sl_start) * 1000,
@@ -1942,23 +1739,6 @@ def qna_gemini(request: QuestionRequest):
     # 🔍 DEBUG
     print("USING SL CONTEXT:", use_sl_as_context)
 
-    # chart_ids = request.chart_ids
-    # kb_ids = request.kb_id
-
-    # # Safety: ensure list
-    # if isinstance(chart_ids, str):
-    #     chart_ids = [chart_ids]
-
-    # if isinstance(kb_ids, str):
-    #     kb_ids = [kb_ids]
-
-    # def is_valid_ids(ids):
-    #     return ids and ids != ["0"] and ids != [""]
-
-    # use_chart = is_valid_ids(chart_ids)
-    # use_kb = is_valid_ids(kb_ids)
-
-
     # -------------------------------
     # STEP 1: INIT
     # -------------------------------
@@ -2019,29 +1799,10 @@ def qna_gemini(request: QuestionRequest):
         2
     )
 
-    # -------------------------------
-    # TEST EXACT MATCH
-    # -------------------------------
-
-    if kb_ids:
-
-        test_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
-
-        print("TEST MATCH FOUND:", test_match is not None)
 
     # -------------------------------
     # STEP 5: KB RETRIEVAL
     # -------------------------------
-    # kb_results = None
-
-    # if use_kb:
-    #     if "job_n" in kb_ids:
-    #         kb_results = query_kb_embeddings(query_embedding, top_k=10)
-    #     else:
-    #         kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
 
     kb_results = None
 
@@ -2078,16 +1839,6 @@ def qna_gemini(request: QuestionRequest):
     # -------------------------------
     # STEP 6: DEBUG
     # -------------------------------
-    # print("\n================ RETRIEVAL DEBUG ================")
-
-    # print("\n--- CHART RESULTS (Merged) ---")
-    # for match in all_chart_matches:
-    #     print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    # print("\n--- KB RESULTS ---")
-    # if kb_results:
-    #     for match in kb_results.matches:
-    #         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
     print("\n--- KB RESULTS ---")
 
@@ -2100,9 +1851,9 @@ def qna_gemini(request: QuestionRequest):
             for match in kb_results.matches:
                 print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
-    # -------------------------------
-    # STEP 7: CONTEXT BUILDING
-    # -------------------------------
+    # --------------------------------
+    # STEP 7: BUILD RETRIEVAL CONTEXT
+    # --------------------------------
     prompt_start = time.perf_counter()
     
     if not use_chart and not use_kb:
@@ -2110,9 +1861,9 @@ def qna_gemini(request: QuestionRequest):
     else:
         context = build_context(all_chart_matches, kb_results)
 
-    # -------------------------------
+    # -----------------------------------------
     # Inject SL context (if medium confidence)
-    # -------------------------------
+    # -----------------------------------------
     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
 
     if use_sl_as_context and sl_context:
@@ -2142,7 +1893,7 @@ def qna_gemini(request: QuestionRequest):
 
         context = f"{conversation_context}\n\n{context}"
 
-    ttl_prompt = round(
+    ttl_context_build = round(
         (time.perf_counter() - prompt_start) * 1000,
         2
     )
@@ -2202,7 +1953,7 @@ def qna_gemini(request: QuestionRequest):
         },
         {
             "stage": "ttl_context_build",
-            "time_ms": ttl_prompt
+            "time_ms": ttl_context_build
         },
         {
             "stage": "ttl_reasoning",
@@ -2374,120 +2125,6 @@ def welcome_message(request: WelcomeRequest):
     return {
         "answer": answer
     }
-
-# @app.post("/qna_gemini")
-# def qna_gemini(request: QuestionRequest):
-
-#     chart_ids = request.chart_ids
-#     kb_ids = request.kb_id
-
-#     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
-#     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
-
-#     # -------------------------------
-#     # STEP 1: INIT
-#     # -------------------------------
-#     qna_id = None
-#     chart_details = []
-#     all_chart_matches = []
-
-#     # -------------------------------
-#     # STEP 2: FETCH CHART + STORE QNA
-#     # -------------------------------
-#     if use_chart:
-#         chart_details = get_chart_details_bulk(chart_ids)
-
-#         if chart_details:
-#             primary_chart = chart_details[0]
-
-#             qna_id = insert_qna(
-#                 primary_chart["user_id"],
-#                 primary_chart["profile_id"],
-#                 primary_chart["chart_id"],
-#                 request.question
-#             )
-
-#     # -------------------------------
-#     # STEP 3: EMBEDDING
-#     # -------------------------------
-#     response = client.embeddings.create(
-#         model="text-embedding-3-small",
-#         input=request.question
-#     )
-#     query_embedding = response.data[0].embedding
-
-#     # -------------------------------
-#     # STEP 4: CHART RETRIEVAL
-#     # -------------------------------
-#     if use_chart and chart_details:
-#         for chart in chart_details:
-#             results = query_chart_embeddings(
-#                 query_embedding,
-#                 chart["user_id"],
-#                 chart["profile_id"],
-#                 chart["chart_id"],
-#                 top_k=5
-#             )
-#             all_chart_matches.extend(results.matches)
-
-#     # -------------------------------
-#     # STEP 5: KB RETRIEVAL
-#     # -------------------------------
-#     kb_results = None
-
-#     if use_kb:
-#         if "job_n" in kb_ids:
-#             kb_results = query_kb_embeddings(query_embedding, top_k=10)
-#         else:
-#             kb_results = query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=10)
-
-#     # -------------------------------
-#     # STEP 6: DEBUG
-#     # -------------------------------
-#     print("\n================ RETRIEVAL DEBUG ================")
-
-#     print("\n--- CHART RESULTS (Merged) ---")
-#     for match in all_chart_matches:
-#         print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-#     print("\n--- KB RESULTS ---")
-#     if kb_results:
-#         for match in kb_results.matches:
-#             print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-#     # -------------------------------
-#     # STEP 7: CONTEXT BUILDING
-#     # -------------------------------
-#     if not use_chart and not use_kb:
-#         context = ""
-#     else:
-#         context = build_context(all_chart_matches, kb_results)
-
-#     # -------------------------------
-#     # STEP 8: GENERATE ANSWER
-#     # -------------------------------
-#     # answer = generate_answer_gemini(request.question, context)
-
-#     print("MODEL USED: GEMINI")
-
-#     answer = generate_answer_gemini(
-#         request.question,
-#         context
-#     )
-
-#     # -------------------------------
-#     # STEP 9: STORE ANSWER
-#     # -------------------------------
-#     if qna_id:
-#         update_qna_answer(qna_id, answer)
-
-#     # -------------------------------
-#     # STEP 10: RESPONSE
-#     # -------------------------------
-#     return {
-#         "answer": answer
-#     }
-
 
 
 @app.post("/delete_kb")
@@ -2901,345 +2538,29 @@ def delete_qna_sl(request: DeleteQnaSLRequest):
     }
 
 
-@app.get("/find_yoga")
-def find_yoga(kb_id: str, yoga: str):
+# -------------------------------------------------
+# DEBUG ENDPOINT - Search KB for a specific yoga
+# Used during retrieval development.
+# Not used by ask_question or retrieval_test.
+# -------------------------------------------------
 
-    chunks = get_all_kb_chunks(kb_id)
+# @app.get("/find_yoga")
+# def find_yoga(kb_id: str, yoga: str):
 
-    matches = []
+#     chunks = get_all_kb_chunks(kb_id)
 
-    for chunk in chunks:
+#     matches = []
 
-        text = chunk.metadata.get("text", "")
+#     for chunk in chunks:
 
-        if yoga.lower() in text.lower():
+#         text = chunk.metadata.get("text", "")
 
-            matches.append(text[:1000])
+#         if yoga.lower() in text.lower():
 
-    return matches[:5]
+#             matches.append(text[:1000])
 
+#     return matches[:5]
 
-class RetrievalTestRequest(BaseModel):
-    question: str
-
-    kb_ids: Optional[list[str]] = None
-
-    user_id: Optional[str] = None
-    profile_id: Optional[str] = None
-    chart_id: Optional[str] = None
-
-    include_kb: bool = True
-    include_chart: bool = False
-    include_sl: bool = False
-
-    top_k: int = 50
-
-# @app.post("/retrieval_test")
-# async def retrieval_test(request: RetrievalTestRequest):
-#     try:
-
-#         # --------------------------------
-#         # EMBEDDING
-#         # --------------------------------
-#         response = client.embeddings.create(
-#             model="text-embedding-3-small",
-#             input=request.question
-#         )
-
-#         query_embedding = response.data[0].embedding
-
-#         # --------------------------------
-#         # EXACT MATCH
-#         # --------------------------------
-#         exact_match = None
-
-#         if (
-#             request.include_kb
-#             and request.kb_ids
-#             and len(request.kb_ids) > 0
-#         ):
-#             exact_match = find_exact_kb_match(
-#                 request.kb_ids[0],
-#                 request.question
-#             )
-
-#         # --------------------------------
-#         # VECTOR SEARCH
-#         # --------------------------------
-#         semantic_results = None
-
-#         # -----------------------------
-#         # KB Retrieval
-#         # -----------------------------
-#         if (
-#             request.include_kb
-#             and request.kb_ids
-#         ):
-#             semantic_results = query_kb_embeddings_filtered(
-#                 query_embedding,
-#                 request.kb_ids,
-#                 top_k=request.top_k
-#             )
-
-#         # -----------------------------
-#         # Chart Retrieval
-#         # -----------------------------
-#         elif (
-#             request.include_chart
-#             and request.user_id
-#             and request.profile_id
-#             and request.chart_id
-#         ):
-#             semantic_results = query_chart_embeddings(
-#                 query_embedding,
-#                 request.user_id,
-#                 request.profile_id,
-#                 request.chart_id,
-#                 top_k=request.top_k
-#             )
-
-#         # -----------------------------
-#         # SL Retrieval
-#         # -----------------------------
-#         elif (
-#             request.include_sl
-#             and request.kb_ids
-#         ):
-#             semantic_results = query_qna_sl_embeddings(
-#                 query_embedding,
-#                 request.kb_ids[0],
-#                 top_k=request.top_k
-#             )
-
-#         # --------------------------------
-#         # NOISE FILTER
-#         # --------------------------------
-
-#         import re
-
-#         def is_noise_chunk(text):
-
-#             text_lower = text.lower()
-
-#             # obvious PDF garbage
-#             if "appendix" in text_lower:
-#                 return True
-
-#             if "contents" in text_lower:
-#                 return True
-
-#             # count numbers
-#             numbers = re.findall(r"\d+", text)
-
-#             # chunks full of page numbers/index entries
-#             if len(numbers) > 20:
-#                 return True
-
-#             return False
-
-#         filtered_matches = []
-
-#         if semantic_results:
-
-#             for match in semantic_results.matches:
-
-#                 text = match.metadata.get("text", "")
-
-#                 if not is_noise_chunk(text):
-#                     filtered_matches.append(match)
-
-
-#         # ==========================================
-#         # DEBUG RAW PINECONE RESULTS
-#         # ==========================================
-#         if semantic_results:
-
-#             print("\n===== ORIGINAL PINECONE =====")
-
-#             for idx, match in enumerate(
-#                 semantic_results.matches[:20]
-#             ):
-
-#                 print(
-#                     idx + 1,
-#                     round(match.score, 4),
-#                     match.metadata.get("text", "")[:150]
-#                 )
-
-#             print("\n===== AFTER NOISE FILTER =====")
-
-#             for idx, match in enumerate(
-#                 filtered_matches[:20]
-#             ):
-
-#                 print(
-#                     idx + 1,
-#                     round(match.score, 4),
-#                     match.metadata.get("text", "")[:150]
-#                 )
-
-#         # --------------------------------
-#         # RERANKING
-#         # --------------------------------
-
-#         query_lower = request.question.lower()
-
-#         query_phrase = None
-
-#         if "yoga" in query_lower:
-
-#             words = query_lower.split()
-
-#             for i in range(len(words) - 1):
-
-#                 if words[i + 1] == "yoga":
-
-#                     query_phrase = words[i] + " yoga"
-#                     break
-
-#         query_words = set(
-#             re.findall(
-#                 r"[a-zA-Z]+",
-#                 request.question.lower()
-#             )
-#         )
-
-#         reranked = []
-
-#         for match in filtered_matches:
-
-#             text = match.metadata.get(
-#                 "text",
-#                 ""
-#             ).lower()
-
-#             overlap_score = sum(
-#                 1
-#                 for word in query_words
-#                 if len(word) > 3 and word in text
-#             )
-
-#             final_score = match.score
-
-#             final_score += overlap_score * 0.05
-
-#             reranked.append(
-#                 (final_score, match)
-#             )
-
-#         reranked.sort(
-#             key=lambda x: x[0],
-#             reverse=True
-#         )
-
-#         filtered_matches = [
-#             item[1]
-#             for item in reranked
-#         ]
-
-#         # --------------------------------
-#         # FOUND RANKS
-#         # --------------------------------
-
-#         search_terms = [
-#             "yupa yoga",
-#             "vasumathi yoga"
-#         ]
-
-#         found_ranks = {}
-
-#         for term in search_terms:
-
-#             found_ranks[term] = None
-
-#             for idx, match in enumerate(filtered_matches):
-
-#                 text = match.metadata.get(
-#                     "text",
-#                     ""
-#                 ).lower()
-
-#                 if term in text:
-
-#                     found_ranks[term] = idx + 1
-#                     break
-
-#         # --------------------------------
-#         # RESPONSE
-#         # --------------------------------
-
-#         return {
-#             "status": "success",
-
-#             "found_ranks": found_ranks,
-
-#             "question": request.question,
-
-#             "embedding_dimension": len(
-#                 query_embedding
-#             ),
-
-#             "exact_match_found":
-#                 exact_match is not None,
-
-#             "exact_match_text":
-#                 exact_match.metadata.get(
-#                     "text",
-#                     ""
-#                 )[:500]
-#                 if exact_match
-#                 else None,
-
-#             "semantic_match_count":
-#                 len(filtered_matches),
-
-#             "semantic_matches": [
-#                 {
-#                     "rank": idx + 1,
-
-#                     "score": round(
-#                         reranked[idx][0],
-#                         4
-#                     ),
-
-#                     "file_id":
-#                         match.metadata.get(
-#                             "file_id"
-#                         ),
-
-#                     "user_id":
-#                         match.metadata.get(
-#                             "user_id"
-#                         ),
-
-#                     "profile_id":
-#                         match.metadata.get(
-#                             "profile_id"
-#                         ),
-
-#                     "chart_id":
-#                         match.metadata.get(
-#                             "chart_id"
-#                         ),
-
-#                     "text":
-#                         match.metadata.get(
-#                             "text",
-#                             ""
-#                         )[:500]
-#                 }
-#                 for idx, match in enumerate(
-#                     filtered_matches[:10]
-#                 )
-#             ]
-#         }
-
-#     except Exception as e:
-
-#         raise HTTPException(
-#             status_code=500,
-#             detail=str(e)
-#         )
 
 @app.post("/retrieval_test")
 async def retrieval_test(request: RetrievalTestRequest):
@@ -3253,6 +2574,7 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         print("===========================================")
 
+
         # --------------------------------
         # EMBEDDING
         # --------------------------------
@@ -3263,31 +2585,68 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         query_embedding = response.data[0].embedding
 
+
         # --------------------------------
-        # CHART RETRIEVAL ONLY (HARDCODED)
+        # RETRIEVAL PIPELINE
         # --------------------------------
-        print("\n========== CHART RETRIEVAL TEST ==========")
+        print("\n========== RETRIEVAL PIPELINE ==========")
 
-        semantic_results = query_chart_embeddings(
-            query_embedding,
-            user_id="2",
-            profile_id="45",
-            chart_id="115",
-            top_k=20
-        )
+        # -------------------------------
+        # Chart Retrieval
+        # -------------------------------
+        chart_details = []
+        all_chart_matches = []
 
-        TEST_KB_ID = "1782292959_300_combination"
+        if request.chart_ids:
 
-        kb_results = query_kb_embeddings_filtered(
-            query_embedding,
-            [TEST_KB_ID],
-            top_k=20
-        )
+            chart_details = get_chart_details_bulk(request.chart_ids)
+
+            for chart in chart_details:
+
+                results = query_chart_embeddings(
+                    query_embedding,
+                    chart["user_id"],
+                    chart["profile_id"],
+                    chart["chart_id"],
+                    top_k=request.top_k
+                )
+
+                all_chart_matches.extend(results.matches)
+
+        semantic_results = all_chart_matches
+
+        # -------------------------------
+        # Knowledge Base Retrieval
+        # -------------------------------
+        exact_match = None
+        kb_results = None
+
+        if request.kb_id:
+
+            exact_match = find_exact_kb_match(
+                request.kb_id[0],
+                request.question
+            )
+
+            if exact_match:
+
+                print("USING EXACT MATCH")
+
+                kb_results = [exact_match]
+
+            else:
+
+                print("USING VECTOR SEARCH")
+
+                kb_results = query_kb_embeddings_filtered(
+                    query_embedding,
+                    request.kb_id,
+                    top_k=request.top_k
+                )
 
         # --------------------------------
         # NOISE FILTER
         # --------------------------------
-        import re
 
         def is_noise_chunk(text):
 
@@ -3312,7 +2671,7 @@ async def retrieval_test(request: RetrievalTestRequest):
 
             filtered_matches = [
                 match
-                for match in semantic_results.matches
+                for match in semantic_results
                 if not is_noise_chunk(
                     match.metadata.get("text", "")
                 )
@@ -3326,7 +2685,7 @@ async def retrieval_test(request: RetrievalTestRequest):
             print("\n===== ORIGINAL PINECONE =====")
 
             for idx, match in enumerate(
-                semantic_results.matches[:20]
+                semantic_results[:20]
             ):
 
                 print(
@@ -3404,69 +2763,21 @@ async def retrieval_test(request: RetrievalTestRequest):
             kb_results
         )
 
+        print("\n========== CONTEXT DEBUG ==========")
+        print("Context length:", len(context))
+        print("Retrieved chart chunks:", len(filtered_matches))
+        print(
+            "KB chunks:",
+            len(kb_results)
+            if isinstance(kb_results, list)
+            else len(kb_results.matches)
+            if kb_results
+            else 0
+        )
+
         # --------------------------------
         # RESPONSE
         # --------------------------------
-
-        # return {
-
-        #     "status": "success",
-
-        #     "question": request.question,
-
-        #     "hardcoded_chart": {
-        #         "user_id": "2",
-        #         "profile_id": "45",
-        #         "chart_id": "105"
-        #     },
-
-        #     "embedding_dimension": len(
-        #         query_embedding
-        #     ),
-
-        #     "semantic_match_count":
-        #         len(filtered_matches),
-
-        #     "semantic_matches": [
-
-        #         {
-        #             "rank": idx + 1,
-
-        #             "score": round(
-        #                 reranked[idx][0],
-        #                 4
-        #             ),
-
-        #             "file_id":
-        #                 match.metadata.get(
-        #                     "file_id"
-        #                 ),
-
-        #             "user_id":
-        #                 match.metadata.get(
-        #                     "user_id"
-        #                 ),
-
-        #             "profile_id":
-        #                 match.metadata.get(
-        #                     "profile_id"
-        #                 ),
-
-        #             "chart_id":
-        #                 match.metadata.get(
-        #                     "chart_id"
-        #                 ),
-
-        #             "text":
-        #                 match.metadata.get(
-        #                     "text",
-        #                     ""
-        #                 )[:500]
-        #         }
-
-        #         for idx, match in enumerate(
-        #             filtered_matches[:10]
-        #         )
 
         return {
 
@@ -3474,20 +2785,22 @@ async def retrieval_test(request: RetrievalTestRequest):
 
             "question": request.question,
 
-            "hardcoded_chart": {
-                "user_id": "2",
-                "profile_id": "45",
-                "chart_id": "105"
-            },
+            "chart_ids": request.chart_ids,
 
-            "hardcoded_kb": TEST_KB_ID,
+            "kb_id": request.kb_id,
+
+            "top_k": request.top_k,
 
             "embedding_dimension": len(query_embedding),
 
-            "chart_match_count": len(filtered_matches),
+            "filtered_chart_match_count": len(filtered_matches),
+
+            "exact_match_used": isinstance(kb_results, list),
 
             "kb_match_count": (
-                len(kb_results.matches)
+                len(kb_results)
+                if isinstance(kb_results, list)
+                else len(kb_results.matches)
                 if kb_results
                 else 0
             ),
@@ -3515,25 +2828,3 @@ async def retrieval_test(request: RetrievalTestRequest):
             status_code=500,
             detail=str(e)
         )
-    
-
-# @app.get("/debug_chart_vectors")
-# def debug_chart_vectors():
-
-#     print("DEBUG ENDPOINT HIT")
-
-#     results = index.query(
-#         vector=[0.0] * 1536,
-#         top_k=10,
-#         include_metadata=True
-#     )
-
-#     print("MATCH COUNT:", len(results.matches))
-
-#     for i, match in enumerate(results.matches):
-#         print(f"MATCH {i+1}")
-#         print(match.metadata)
-
-#     return {
-#         "match_count": len(results.matches)
-#     }

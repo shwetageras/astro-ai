@@ -1,7 +1,13 @@
+import os
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 import requests
-import time
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def notify_embedding_status(file_id, job_id, created_at, file_name):
 
@@ -22,23 +28,23 @@ def notify_embedding_status(file_id, job_id, created_at, file_name):
 
     try:
         response = requests.post(
-            "https://api.xtrology.ai/admin/kb/kb_status.php",
+            os.getenv("KB_CALLBACK_URL"),
             json=payload,
             timeout=10
         )
 
-        print("Callback response:", response.text)
+        print("KB CALLBACK RESPONSE:", response.text)
 
         if response.status_code != 200:
             print(f"[WARNING] KB callback failed with status code {response.status_code}")
 
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"[ERROR] KB callback failed: {str(e)}")
 
 
 def notify_chart_status(job_id, chart_id, file_id):
 
-    url = "https://api.xtrology.ai/admin/charts/charts_status.php"
+    url = os.getenv("CHART_CALLBACK_URL")
 
     payload = {
         "job_id": job_id,          # for status tracking
@@ -53,10 +59,10 @@ def notify_chart_status(job_id, chart_id, file_id):
     try:
         response = requests.post(url, json=payload, timeout=10)
 
-        print("Chart Callback Response:", response.text)
+        print("CHART CALLBACK RESPONSE:", response.text)
 
         if response.status_code != 200:
             print(f"[WARNING] Callback failed with status code {response.status_code}")
 
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"[ERROR] Chart callback failed: {str(e)}")
