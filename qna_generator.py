@@ -134,16 +134,27 @@ def generate_qnas(kb_id):
     # STEP 5: PARSE RESPONSE
     # -----------------------------------
 
-    print("RAW GPT RESPONSE:")
+    print("RAW MODEL RESPONSE:")
     print(content)
+
+    # Gemini may wrap JSON inside Markdown code fences
+    content = content.strip()
+
+    if content.startswith("```json"):
+        content = content.replace("```json", "", 1)
+
+    if content.startswith("```"):
+        content = content.replace("```", "", 1)
+
+    if content.endswith("```"):
+        content = content[:-3]
+
+    content = content.strip()
 
     try:
         parsed = json.loads(content)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON returned by GPT: {e}")
-
-    if "qnas" not in parsed:
-        raise ValueError("Invalid GPT response format")
+        raise ValueError(f"Invalid JSON returned by model: {e}")
     
     # -----------------------------------
     # STEP 6: RETURN QNAS
