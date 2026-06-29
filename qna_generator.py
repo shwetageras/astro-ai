@@ -20,6 +20,8 @@ genai.configure(
 
 def generate_qnas_gpt(prompt):
 
+    print("USING GPT FOR QNA GENERATION")
+
     response = client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[
@@ -44,6 +46,8 @@ def generate_qnas_gpt(prompt):
 
 
 def generate_qnas_gemini(prompt):
+
+    print("USING GEMINI FOR QNA GENERATION")
 
     print(f"GENERATING QNAS USING: {GEMINI_MODEL}")
 
