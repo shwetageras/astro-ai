@@ -1,11 +1,63 @@
 import json
+import google.generativeai as genai
 
 from kb_builder import client
 from vector_db import get_all_kb_chunks
 from prompts import build_qna_generation_prompt
 from db import insert_generated_qna
 from db import get_file_id_from_job
-from settings import OPENAI_MODEL
+from settings import OPENAI_MODEL, GEMINI_MODEL, QNA_GENERATION_MODEL
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+genai.configure(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
+
+
+def generate_qnas_gpt(prompt):
+
+    response = client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": "You generate educational QnAs."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        response_format={"type": "json_object"}
+    )
+
+    content = response.choices[0].message.content
+
+    if not content:
+        raise ValueError("Empty response from GPT")
+
+    return content
+
+
+def generate_qnas_gemini(prompt):
+
+    print(f"GENERATING QNAS USING: {GEMINI_MODEL}")
+
+    model = genai.GenerativeModel(GEMINI_MODEL)
+
+    response = model.generate_content(prompt)
+
+    content = getattr(response, "text", "")
+
+    if not content:
+        raise ValueError("Empty response from Gemini")
+
+    return content
+
 
 def generate_qnas(kb_id):
 
@@ -55,30 +107,28 @@ def generate_qnas(kb_id):
     prompt = build_qna_generation_prompt(context)
 
     # -----------------------------------
-    # STEP 4: GPT GENERATION
+    # STEP 4: QNA GENERATION
     # -----------------------------------
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": "You generate educational QnAs."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        response_format={"type": "json_object"}
-    )
+
+    print(f"MODEL USED: {QNA_GENERATION_MODEL.upper()}")
+
+    if QNA_GENERATION_MODEL == "gemini":
+
+        content = generate_qnas_gemini(prompt)
+
+    elif QNA_GENERATION_MODEL == "gpt":
+
+        content = generate_qnas_gpt(prompt)
+
+    else:
+
+        raise ValueError(
+            f"Unsupported QNA_GENERATION_MODEL: {QNA_GENERATION_MODEL}"
+        )
 
     # -----------------------------------
     # STEP 5: PARSE RESPONSE
     # -----------------------------------
-    content = response.choices[0].message.content
-
-    if not content:
-        raise ValueError("Empty response from GPT")
 
     print("RAW GPT RESPONSE:")
     print(content)
