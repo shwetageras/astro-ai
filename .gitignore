@@ -1,8 +1,23 @@
+# Python
 __pycache__/
-venv/
-*.pem
 *.pyc
+venv/
+
+# Environment
 .env
+
+# AWS / Keys
+*.pem
+aws/
+
+# Logs
 nohup.out
 output.log
-aws/
+*.log
+
+# Generated KB files
+kb/
+
+# Temporary files
+temp/
+tmp/
