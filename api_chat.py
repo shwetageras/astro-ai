@@ -742,72 +742,72 @@ class RetrievalTestRequest(BaseModel):
 
 
 # Create API → /upload_kb
-@app.post("/upload_kb")
-async def upload_kb(
-    background_tasks: BackgroundTasks,
-    isKbtype: str = Form(...),
-    name: str = Form(...),
-    content: str = Form(None),
-    file: UploadFile = File(None),
-):
-    import time
+# @app.post("/upload_kb")
+# async def upload_kb(
+#     background_tasks: BackgroundTasks,
+#     isKbtype: str = Form(...),
+#     name: str = Form(...),
+#     content: str = Form(None),
+#     file: UploadFile = File(None),
+# ):
+#     import time
 
-    timestamp = int(time.time())
+#     timestamp = int(time.time())
 
-    safe_name = make_safe_filename(name)
-    file_id = f"{timestamp}_{safe_name}"
+#     safe_name = make_safe_filename(name)
+#     file_id = f"{timestamp}_{safe_name}"
     
-    job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
+#     job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
 
-    # 🔥 CASE 1: TEXT INPUT
-    if isKbtype == "article":
+#     # 🔥 CASE 1: TEXT INPUT
+#     if isKbtype == "article":
 
-        if not content:
-            raise HTTPException(status_code=400, detail="Content is required for article type")
+#         if not content:
+#             raise HTTPException(status_code=400, detail="Content is required for article type")
 
-        # STEP 1
-        insert_job(job_id, file_id, name, "processing", timestamp)
+#         # STEP 1
+#         insert_job(job_id, file_id, name, "processing", timestamp)
 
-        # STEP 2
-        background_tasks.add_task(
-            process_text,
-            content,
-            file_id,
-            name,
-            job_id,
-            timestamp
-        )
+#         # STEP 2
+#         background_tasks.add_task(
+#             process_text,
+#             content,
+#             file_id,
+#             name,
+#             job_id,
+#             timestamp
+#         )
 
-    # 🔥 CASE 2: FILE INPUT
-    elif isKbtype == "file":
+#     # 🔥 CASE 2: FILE INPUT
+#     elif isKbtype == "file":
 
-        if not file:
-            raise HTTPException(status_code=400, detail="File is required for file type")
+#         if not file:
+#             raise HTTPException(status_code=400, detail="File is required for file type")
 
-        # Store job info
-        insert_job(job_id, file_id, name, "processing", timestamp)
+#         # Store job info
+#         insert_job(job_id, file_id, name, "processing", timestamp)
         
-        file_bytes = await file.read()
+#         file_bytes = await file.read()
 
-        # Upload to S3
-        save_file(file_bytes, file_id)
+#         # Upload to S3
+#         save_file(file_bytes, file_id)
 
-        background_tasks.add_task(
-            process_pdf,
-            file_bytes,
-            file_id,
-            file.filename,   # USE REAL FILE NAME
-            job_id,
-            timestamp
-        )
+#         background_tasks.add_task(
+#             process_pdf,
+#             file_bytes,
+#             file_id,
+#             file.filename,   # USE REAL FILE NAME
+#             job_id,
+#             timestamp
+#         )
 
-    else:
-        raise HTTPException(status_code=400, detail="Invalid isKbtype")
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid isKbtype")
 
-    return {
-        "job_id": job_id,
-        "status": "processing"
-    }
+#     return {
+#         "job_id": job_id,
+#         "status": "processing"
+#     }
 
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
