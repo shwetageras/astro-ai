@@ -742,72 +742,72 @@ class RetrievalTestRequest(BaseModel):
 
 
 # Create API → /upload_kb
-@app.post("/upload_kb")
-async def upload_kb(
-    background_tasks: BackgroundTasks,
-    isKbtype: str = Form(...),
-    name: str = Form(...),
-    content: str = Form(None),
-    file: UploadFile = File(None),
-):
-    import time
+# @app.post("/upload_kb")
+# async def upload_kb(
+#     background_tasks: BackgroundTasks,
+#     isKbtype: str = Form(...),
+#     name: str = Form(...),
+#     content: str = Form(None),
+#     file: UploadFile = File(None),
+# ):
+#     import time
 
-    timestamp = int(time.time())
+#     timestamp = int(time.time())
 
-    safe_name = make_safe_filename(name)
-    file_id = f"{timestamp}_{safe_name}"
+#     safe_name = make_safe_filename(name)
+#     file_id = f"{timestamp}_{safe_name}"
     
-    job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
+#     job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
 
-    # 🔥 CASE 1: TEXT INPUT
-    if isKbtype == "article":
+#     # 🔥 CASE 1: TEXT INPUT
+#     if isKbtype == "article":
 
-        if not content:
-            raise HTTPException(status_code=400, detail="Content is required for article type")
+#         if not content:
+#             raise HTTPException(status_code=400, detail="Content is required for article type")
 
-        # STEP 1
-        insert_job(job_id, file_id, name, "processing", timestamp)
+#         # STEP 1
+#         insert_job(job_id, file_id, name, "processing", timestamp)
 
-        # STEP 2
-        background_tasks.add_task(
-            process_text,
-            content,
-            file_id,
-            name,
-            job_id,
-            timestamp
-        )
+#         # STEP 2
+#         background_tasks.add_task(
+#             process_text,
+#             content,
+#             file_id,
+#             name,
+#             job_id,
+#             timestamp
+#         )
 
-    # 🔥 CASE 2: FILE INPUT
-    elif isKbtype == "file":
+#     # 🔥 CASE 2: FILE INPUT
+#     elif isKbtype == "file":
 
-        if not file:
-            raise HTTPException(status_code=400, detail="File is required for file type")
+#         if not file:
+#             raise HTTPException(status_code=400, detail="File is required for file type")
 
-        # Store job info
-        insert_job(job_id, file_id, name, "processing", timestamp)
+#         # Store job info
+#         insert_job(job_id, file_id, name, "processing", timestamp)
         
-        file_bytes = await file.read()
+#         file_bytes = await file.read()
 
-        # Upload to S3
-        save_file(file_bytes, file_id)
+#         # Upload to S3
+#         save_file(file_bytes, file_id)
 
-        background_tasks.add_task(
-            process_pdf,
-            file_bytes,
-            file_id,
-            file.filename,   # USE REAL FILE NAME
-            job_id,
-            timestamp
-        )
+#         background_tasks.add_task(
+#             process_pdf,
+#             file_bytes,
+#             file_id,
+#             file.filename,   # USE REAL FILE NAME
+#             job_id,
+#             timestamp
+#         )
 
-    else:
-        raise HTTPException(status_code=400, detail="Invalid isKbtype")
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid isKbtype")
 
-    return {
-        "job_id": job_id,
-        "status": "processing"
-    }
+#     return {
+#         "job_id": job_id,
+#         "status": "processing"
+#     }
 
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
@@ -818,32 +818,32 @@ def get_status(job_id: str):
 
     return job
 
-@app.post("/query")
-def query_docs(request: QueryRequest):
+# @app.post("/query")
+# def query_docs(request: QueryRequest):
     
-    # Create embedding for query
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.query
-    )
+#     # Create embedding for query
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.query
+#     )
     
-    query_embedding = response.data[0].embedding
+#     query_embedding = response.data[0].embedding
 
-    # Search Pinecone
-    results = query_embeddings(query_embedding)
+#     # Search Pinecone
+#     results = query_embeddings(query_embedding)
 
-    # Extract texts
-    matches = []
-    for match in results["matches"]:
-        matches.append({
-            "score": match["score"],
-            "text": match["metadata"]["text"]
-        })
+#     # Extract texts
+#     matches = []
+#     for match in results["matches"]:
+#         matches.append({
+#             "score": match["score"],
+#             "text": match["metadata"]["text"]
+#         })
 
-    return {
-        "query": request.query,
-        "results": matches
-    }
+#     return {
+#         "query": request.query,
+#         "results": matches
+#     }
 
 # Create NEW API → /upload_chart
 @app.post("/upload_chart")
@@ -941,1048 +941,1048 @@ async def upload_chart(
     }
 
 
-@app.post("/ask_question")
-def ask_question(request: QuestionRequest):
+# @app.post("/ask_question")
+# def ask_question(request: QuestionRequest):
     
-    start_time = time.time()
+#     start_time = time.time()
 
-    chart_ids = request.chart_ids
+#     chart_ids = request.chart_ids
     
-    kb_ids = request.kb_id
+#     kb_ids = request.kb_id
 
-    # normalize safely
-    if isinstance(kb_ids, str):
-        kb_ids = [kb_ids]
-    elif not isinstance(kb_ids, list):
-        kb_ids = []
+#     # normalize safely
+#     if isinstance(kb_ids, str):
+#         kb_ids = [kb_ids]
+#     elif not isinstance(kb_ids, list):
+#         kb_ids = []
 
-    kb_id = kb_ids[0] if kb_ids else ""
+#     kb_id = kb_ids[0] if kb_ids else ""
 
-    print("KB IDS:", kb_ids)
-    print("KB ID USED:", kb_id)
+#     print("KB IDS:", kb_ids)
+#     print("KB ID USED:", kb_id)
 
-    use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
-    use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
-    use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
+#     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
+#     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+#     use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
 
-    print("SL IDS:", request.sl_id)
-    print("USE SL:", use_sl)
+#     print("SL IDS:", request.sl_id)
+#     print("USE SL:", use_sl)
 
-    # -------------------------------
-    # STEP 0: Initialize SL vars
-    # -------------------------------
-    use_sl_as_context = False
+#     # -------------------------------
+#     # STEP 0: Initialize SL vars
+#     # -------------------------------
+#     use_sl_as_context = False
     
-    ttl_q_embedding = 0
-    ttl_sl_match = 0
-    ttl_kb_context = 0
-    ttl_chart_context = 0
-    ttl_reasoning = 0
-    ttl_delivery = 0
+#     ttl_q_embedding = 0
+#     ttl_sl_match = 0
+#     ttl_kb_context = 0
+#     ttl_chart_context = 0
+#     ttl_reasoning = 0
+#     ttl_delivery = 0
 
-    # -------------------------------
-    # STEP 0.1: Check SL memory
-    # -------------------------------
-    if use_sl:
+#     # -------------------------------
+#     # STEP 0.1: Check SL memory
+#     # -------------------------------
+#     if use_sl:
 
-        sl_start = time.perf_counter()
+#         sl_start = time.perf_counter()
 
-        sl_result = qna_sl_search(
-            QnaSearchRequest(
-                question=request.question,
-                kb_id=kb_id
-            )
-        )
+#         sl_result = qna_sl_search(
+#             QnaSearchRequest(
+#                 question=request.question,
+#                 kb_id=kb_id
+#             )
+#         )
 
-        ttl_sl_match = round(
-            (time.perf_counter() - sl_start) * 1000,
-            2
-        )
+#         ttl_sl_match = round(
+#             (time.perf_counter() - sl_start) * 1000,
+#             2
+#         )
 
-        sl_found = sl_result.get("found")
-        matches = sl_result.get("matches", [])
+#         sl_found = sl_result.get("found")
+#         matches = sl_result.get("matches", [])
 
-        if not matches:
-            sl_found = False
-            sl_score = None
-            second = None
-        else:
-            best = matches[0]
-            second = matches[1] if len(matches) > 1 else None
-            sl_score = best["score"]
+#         if not matches:
+#             sl_found = False
+#             sl_score = None
+#             second = None
+#         else:
+#             best = matches[0]
+#             second = matches[1] if len(matches) > 1 else None
+#             sl_score = best["score"]
 
-    else:
+#     else:
 
-        print("SL DISABLED")
+#         print("SL DISABLED")
 
-        sl_found = False
-        matches = []
-        sl_score = None
-        second = None
+#         sl_found = False
+#         matches = []
+#         sl_score = None
+#         second = None
         
-    # 🔍 DEBUG PRINTS
-    print("SL FOUND:", sl_found)
-    print("FIRST MATCH SCORE:", sl_score)
-    print("SECOND MATCH SCORE:", second["score"] if second else None)
-    print("MATCH COUNT:", len(matches))
-    print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
-
-    # -------------------------
-    # STEP 0.2: Decision logic 
-    # -------------------------
-    use_sl_as_context = False
-    sl_context = None
-
-    if sl_found and sl_score is not None:
-
-        # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
-        if sl_score >= 0.60:
-
-            selected_matches = [
-                m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
-                if m["score"] >= 0.60 and m.get("answer")
-            ][:3]
-
-            formatted_matches = []
-
-            for m in selected_matches:
-
-                answer = m.get("answer") or ""
-                question = m.get("question") or ""
-
-                short_answer = (
-                    answer[:300].rsplit(' ', 1)[0] + "..."
-                    if len(answer) > 300
-                    else answer
-                )
-
-                formatted_matches.append(
-                    f"Previous QnA (score {round(m['score'],2)}):\n"
-                    f"Q: {question}\n"
-                    f"A: {short_answer}"
-                )
-
-            sl_context = "\n\n".join(formatted_matches)
-
-            use_sl_as_context = True
-
-        # 🔴 LOW → ignore
-        else:
-            use_sl_as_context = False
-            sl_context = None
-
-    # 🔍 DEBUG
-    print("USING SL CONTEXT:", use_sl_as_context)
-
-    # -------------------------------
-    # STEP 1: INIT
-    # -------------------------------
-    qna_id = None
-    chart_details = []
-    all_chart_matches = []
+#     # 🔍 DEBUG PRINTS
+#     print("SL FOUND:", sl_found)
+#     print("FIRST MATCH SCORE:", sl_score)
+#     print("SECOND MATCH SCORE:", second["score"] if second else None)
+#     print("MATCH COUNT:", len(matches))
+#     print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
+
+#     # -------------------------
+#     # STEP 0.2: Decision logic 
+#     # -------------------------
+#     use_sl_as_context = False
+#     sl_context = None
+
+#     if sl_found and sl_score is not None:
+
+#         # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
+#         if sl_score >= 0.60:
+
+#             selected_matches = [
+#                 m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
+#                 if m["score"] >= 0.60 and m.get("answer")
+#             ][:3]
+
+#             formatted_matches = []
+
+#             for m in selected_matches:
+
+#                 answer = m.get("answer") or ""
+#                 question = m.get("question") or ""
+
+#                 short_answer = (
+#                     answer[:300].rsplit(' ', 1)[0] + "..."
+#                     if len(answer) > 300
+#                     else answer
+#                 )
+
+#                 formatted_matches.append(
+#                     f"Previous QnA (score {round(m['score'],2)}):\n"
+#                     f"Q: {question}\n"
+#                     f"A: {short_answer}"
+#                 )
+
+#             sl_context = "\n\n".join(formatted_matches)
+
+#             use_sl_as_context = True
+
+#         # 🔴 LOW → ignore
+#         else:
+#             use_sl_as_context = False
+#             sl_context = None
+
+#     # 🔍 DEBUG
+#     print("USING SL CONTEXT:", use_sl_as_context)
+
+#     # -------------------------------
+#     # STEP 1: INIT
+#     # -------------------------------
+#     qna_id = None
+#     chart_details = []
+#     all_chart_matches = []
 
-    # -------------------------------
-    # STEP 2: FETCH CHART + STORE QNA
-    # -------------------------------
-    if use_chart:
-        chart_details = get_chart_details_bulk(chart_ids)
-
-        if chart_details:
-            primary_chart = chart_details[0]
-
-            qna_id = insert_qna(
-                primary_chart["user_id"],
-                primary_chart["profile_id"],
-                primary_chart["chart_id"],
-                request.question
-            )
-
-    # -------------------------------
-    # STEP 3: EMBEDDING
-    # -------------------------------
-    embedding_start = time.perf_counter()
-
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
-
-    ttl_q_embedding = round(
-        (time.perf_counter() - embedding_start) * 1000,
-        2
-    )
-    query_embedding = response.data[0].embedding
-
-    # -------------------------------
-    # STEP 4: CHART RETRIEVAL
-    # -------------------------------
-    chart_start = time.perf_counter()
-
-    if use_chart and chart_details:
-        for chart in chart_details:
-            results = query_chart_embeddings(
-                query_embedding,
-                chart["user_id"],
-                chart["profile_id"],
-                chart["chart_id"],
-                top_k=10
-            )
-            all_chart_matches.extend(results.matches)
+#     # -------------------------------
+#     # STEP 2: FETCH CHART + STORE QNA
+#     # -------------------------------
+#     if use_chart:
+#         chart_details = get_chart_details_bulk(chart_ids)
+
+#         if chart_details:
+#             primary_chart = chart_details[0]
+
+#             qna_id = insert_qna(
+#                 primary_chart["user_id"],
+#                 primary_chart["profile_id"],
+#                 primary_chart["chart_id"],
+#                 request.question
+#             )
+
+#     # -------------------------------
+#     # STEP 3: EMBEDDING
+#     # -------------------------------
+#     embedding_start = time.perf_counter()
+
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
+
+#     ttl_q_embedding = round(
+#         (time.perf_counter() - embedding_start) * 1000,
+#         2
+#     )
+#     query_embedding = response.data[0].embedding
+
+#     # -------------------------------
+#     # STEP 4: CHART RETRIEVAL
+#     # -------------------------------
+#     chart_start = time.perf_counter()
+
+#     if use_chart and chart_details:
+#         for chart in chart_details:
+#             results = query_chart_embeddings(
+#                 query_embedding,
+#                 chart["user_id"],
+#                 chart["profile_id"],
+#                 chart["chart_id"],
+#                 top_k=10
+#             )
+#             all_chart_matches.extend(results.matches)
 
-    ttl_chart_context = round(
-        (time.perf_counter() - chart_start) * 1000,
-        2
-    )
+#     ttl_chart_context = round(
+#         (time.perf_counter() - chart_start) * 1000,
+#         2
+#     )
 
 
-    # -------------------------------
-    # STEP 5: KB RETRIEVAL
-    # -------------------------------
+#     # -------------------------------
+#     # STEP 5: KB RETRIEVAL
+#     # -------------------------------
 
-    kb_results = None
+#     kb_results = None
 
-    kb_start = time.perf_counter()
+#     kb_start = time.perf_counter()
 
-    if use_kb:
+#     if use_kb:
 
-        exact_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
+#         exact_match = find_exact_kb_match(
+#             kb_ids[0],
+#             request.question
+#         )
 
-        if exact_match:
+#         if exact_match:
 
-            print("USING EXACT MATCH")
+#             print("USING EXACT MATCH")
 
-            kb_results = [exact_match]
+#             kb_results = [exact_match]
 
-        else:
+#         else:
 
-            print("USING VECTOR SEARCH")
+#             print("USING VECTOR SEARCH")
 
-            kb_results = query_kb_embeddings_filtered(
-                query_embedding,
-                kb_ids,
-                top_k=15
-            )
+#             kb_results = query_kb_embeddings_filtered(
+#                 query_embedding,
+#                 kb_ids,
+#                 top_k=15
+#             )
 
-    ttl_kb_context = round(
-        (time.perf_counter() - kb_start) * 1000,
-        2
-    )
+#     ttl_kb_context = round(
+#         (time.perf_counter() - kb_start) * 1000,
+#         2
+#     )
 
-    # -------------------------------
-    # STEP 6: DEBUG
-    # -------------------------------
+#     # -------------------------------
+#     # STEP 6: DEBUG
+#     # -------------------------------
 
-    print("\n--- KB RESULTS ---")
+#     print("\n--- KB RESULTS ---")
 
-    if kb_results:
-
-        if isinstance(kb_results, list):
-            for match in kb_results:
-                print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
-        else:
-            for match in kb_results.matches:
-                print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    # -------------------------------
-    # STEP 7: CONTEXT BUILDING
-    # -------------------------------
-    prompt_start = time.perf_counter()
-
-    if not use_chart and not use_kb:
-        context = ""   # 🔥 PURE LLM MODE
-    else:
-        context = build_context(all_chart_matches, kb_results)
-
-    # -------------------------------
-    # Inject SL context (if medium confidence)
-    # -------------------------------
-    print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
-
-    if use_sl_as_context and sl_context:
-
-        context = (
-            "Relevant past learned answers (use as base, refine and synthesize):\n"
-            f"{sl_context}\n\n"
-            f"{context}"
-        )
-
-    print("\n--- FINAL CONTEXT ---")
-    print(context[:1000])
-
-
-    # -------------------------------
-    # Inject previous conversation
-    # -------------------------------
-    if request.previous_question and request.previous_answer:
-
-        conversation_context = f"""
-    PREVIOUS CONVERSATION:
-
-    User: {request.previous_question}
-
-    Astrologer: {request.previous_answer}
-    """
-
-        context = f"{conversation_context}\n\n{context}"
-
-    ttl_context_build = round(
-        (time.perf_counter() - prompt_start) * 1000,
-        2
-    )
-
-    # -------------------------------
-    # STEP 8: GENERATE ANSWER
-    # -------------------------------
-    reasoning_start = time.perf_counter()
-
-    answer = generate_answer(
-        request.question,
-        context
-    )
-
-    ttl_reasoning = round(
-        (time.perf_counter() - reasoning_start) * 1000,
-        2
-    )
-
-    # -------------------------------
-    # STEP 9: STORE ANSWER
-    # -------------------------------
-    delivery_start = time.perf_counter()
-
-    if qna_id:
-        update_qna_answer(qna_id, answer)
-
-    ttl_delivery = round(
-        (time.perf_counter() - delivery_start) * 1000,
-        2
-    )
-
-    # -------------------------------
-    # STEP 10: RESPONSE
-    # -------------------------------
-    c_rttl = round(
-        (time.time() - start_time) * 1000,
-        2
-    )
-
-    ttl_breakdown = [
-        {
-            "stage": "ttl_q_embedding",
-            "time_ms": ttl_q_embedding
-        },
-        {
-            "stage": "ttl_sl_match",
-            "time_ms": ttl_sl_match
-        },
-        {
-            "stage": "ttl_kb_context",
-            "time_ms": ttl_kb_context
-        },
-        {
-            "stage": "ttl_chart_context",
-            "time_ms": ttl_chart_context
-        },
-        {
-            "stage": "ttl_context_build",
-            "time_ms": ttl_context_build
-        },
-        {
-            "stage": "ttl_reasoning",
-            "time_ms": ttl_reasoning
-        },
-        {
-            "stage": "ttl_delivery",
-            "time_ms": ttl_delivery
-        }
-    ]
-
-    print("TOTAL RTTL (ms):", c_rttl)
-
-    print("TTL BREAKDOWN:")
-    print(ttl_breakdown)
-
-    return {
-        "source": "gpt-4.1",
-
-        "used_sl": use_sl_as_context,
-        "used_kb": use_kb,
-        "used_chart": use_chart,
-
-        "rttl": c_rttl,
-
-        "c_ttl": ttl_breakdown,
-
-        "answer": answer
-    }
-
-@app.post("/qna_gpt_mini")
-def qna_gpt_mini(request: QuestionRequest):
-
-    start_time = time.time()
-
-    chart_ids = request.chart_ids
+#     if kb_results:
+
+#         if isinstance(kb_results, list):
+#             for match in kb_results:
+#                 print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
+#         else:
+#             for match in kb_results.matches:
+#                 print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+
+#     # -------------------------------
+#     # STEP 7: CONTEXT BUILDING
+#     # -------------------------------
+#     prompt_start = time.perf_counter()
+
+#     if not use_chart and not use_kb:
+#         context = ""   # 🔥 PURE LLM MODE
+#     else:
+#         context = build_context(all_chart_matches, kb_results)
+
+#     # -------------------------------
+#     # Inject SL context (if medium confidence)
+#     # -------------------------------
+#     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
+
+#     if use_sl_as_context and sl_context:
+
+#         context = (
+#             "Relevant past learned answers (use as base, refine and synthesize):\n"
+#             f"{sl_context}\n\n"
+#             f"{context}"
+#         )
+
+#     print("\n--- FINAL CONTEXT ---")
+#     print(context[:1000])
+
+
+#     # -------------------------------
+#     # Inject previous conversation
+#     # -------------------------------
+#     if request.previous_question and request.previous_answer:
+
+#         conversation_context = f"""
+#     PREVIOUS CONVERSATION:
+
+#     User: {request.previous_question}
+
+#     Astrologer: {request.previous_answer}
+#     """
+
+#         context = f"{conversation_context}\n\n{context}"
+
+#     ttl_context_build = round(
+#         (time.perf_counter() - prompt_start) * 1000,
+#         2
+#     )
+
+#     # -------------------------------
+#     # STEP 8: GENERATE ANSWER
+#     # -------------------------------
+#     reasoning_start = time.perf_counter()
+
+#     answer = generate_answer(
+#         request.question,
+#         context
+#     )
+
+#     ttl_reasoning = round(
+#         (time.perf_counter() - reasoning_start) * 1000,
+#         2
+#     )
+
+#     # -------------------------------
+#     # STEP 9: STORE ANSWER
+#     # -------------------------------
+#     delivery_start = time.perf_counter()
+
+#     if qna_id:
+#         update_qna_answer(qna_id, answer)
+
+#     ttl_delivery = round(
+#         (time.perf_counter() - delivery_start) * 1000,
+#         2
+#     )
+
+#     # -------------------------------
+#     # STEP 10: RESPONSE
+#     # -------------------------------
+#     c_rttl = round(
+#         (time.time() - start_time) * 1000,
+#         2
+#     )
+
+#     ttl_breakdown = [
+#         {
+#             "stage": "ttl_q_embedding",
+#             "time_ms": ttl_q_embedding
+#         },
+#         {
+#             "stage": "ttl_sl_match",
+#             "time_ms": ttl_sl_match
+#         },
+#         {
+#             "stage": "ttl_kb_context",
+#             "time_ms": ttl_kb_context
+#         },
+#         {
+#             "stage": "ttl_chart_context",
+#             "time_ms": ttl_chart_context
+#         },
+#         {
+#             "stage": "ttl_context_build",
+#             "time_ms": ttl_context_build
+#         },
+#         {
+#             "stage": "ttl_reasoning",
+#             "time_ms": ttl_reasoning
+#         },
+#         {
+#             "stage": "ttl_delivery",
+#             "time_ms": ttl_delivery
+#         }
+#     ]
+
+#     print("TOTAL RTTL (ms):", c_rttl)
+
+#     print("TTL BREAKDOWN:")
+#     print(ttl_breakdown)
+
+#     return {
+#         "source": "gpt-4.1",
+
+#         "used_sl": use_sl_as_context,
+#         "used_kb": use_kb,
+#         "used_chart": use_chart,
+
+#         "rttl": c_rttl,
+
+#         "c_ttl": ttl_breakdown,
+
+#         "answer": answer
+#     }
+
+# @app.post("/qna_gpt_mini")
+# def qna_gpt_mini(request: QuestionRequest):
+
+#     start_time = time.time()
+
+#     chart_ids = request.chart_ids
     
-    kb_ids = request.kb_id
+#     kb_ids = request.kb_id
 
-    # normalize safely
-    if isinstance(kb_ids, str):
-        kb_ids = [kb_ids]
-    elif not isinstance(kb_ids, list):
-        kb_ids = []
+#     # normalize safely
+#     if isinstance(kb_ids, str):
+#         kb_ids = [kb_ids]
+#     elif not isinstance(kb_ids, list):
+#         kb_ids = []
 
-    kb_id = kb_ids[0] if kb_ids else ""
+#     kb_id = kb_ids[0] if kb_ids else ""
 
-    print("KB IDS:", kb_ids)
-    print("KB ID USED:", kb_id)
+#     print("KB IDS:", kb_ids)
+#     print("KB ID USED:", kb_id)
 
-    use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
-    use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
-    use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
+#     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
+#     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+#     use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
 
-    print("SL IDS:", request.sl_id)
-    print("USE SL:", use_sl)
+#     print("SL IDS:", request.sl_id)
+#     print("USE SL:", use_sl)
 
-    # -------------------------------
-    # STEP 0: Initialize SL vars
-    # -------------------------------
-    use_sl_as_context = False
+#     # -------------------------------
+#     # STEP 0: Initialize SL vars
+#     # -------------------------------
+#     use_sl_as_context = False
     
-    # -------------------------------
-    # STEP 0.1: Check SL memory
-    # -------------------------------
-    if use_sl:
+#     # -------------------------------
+#     # STEP 0.1: Check SL memory
+#     # -------------------------------
+#     if use_sl:
 
-        sl_result = qna_sl_search(
-            QnaSearchRequest(
-                question=request.question,
-                kb_id=kb_id
-            )
-        )
+#         sl_result = qna_sl_search(
+#             QnaSearchRequest(
+#                 question=request.question,
+#                 kb_id=kb_id
+#             )
+#         )
 
-        sl_found = sl_result.get("found")
-        matches = sl_result.get("matches", [])
+#         sl_found = sl_result.get("found")
+#         matches = sl_result.get("matches", [])
 
-        if not matches:
-            sl_found = False
-            sl_score = None
-            second = None
-        else:
-            best = matches[0]
-            second = matches[1] if len(matches) > 1 else None
-            sl_score = best["score"]
+#         if not matches:
+#             sl_found = False
+#             sl_score = None
+#             second = None
+#         else:
+#             best = matches[0]
+#             second = matches[1] if len(matches) > 1 else None
+#             sl_score = best["score"]
 
-    else:
+#     else:
 
-        print("SL DISABLED")
+#         print("SL DISABLED")
 
-        sl_found = False
-        matches = []
-        sl_score = None
-        second = None
+#         sl_found = False
+#         matches = []
+#         sl_score = None
+#         second = None
         
-    # 🔍 DEBUG PRINTS
-    print("SL FOUND:", sl_found)
-    print("FIRST MATCH SCORE:", sl_score)
-    print("SECOND MATCH SCORE:", second["score"] if second else None)
-    print("MATCH COUNT:", len(matches))
-    print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
+#     # 🔍 DEBUG PRINTS
+#     print("SL FOUND:", sl_found)
+#     print("FIRST MATCH SCORE:", sl_score)
+#     print("SECOND MATCH SCORE:", second["score"] if second else None)
+#     print("MATCH COUNT:", len(matches))
+#     print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
 
-    # -------------------------
-    # STEP 0.2: Decision logic 
-    # -------------------------
-    use_sl_as_context = False
-    sl_context = None
+#     # -------------------------
+#     # STEP 0.2: Decision logic 
+#     # -------------------------
+#     use_sl_as_context = False
+#     sl_context = None
 
-    if sl_found and sl_score is not None:
+#     if sl_found and sl_score is not None:
 
-        # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
-        if sl_score >= 0.60:
+#         # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
+#         if sl_score >= 0.60:
 
-            selected_matches = [
-                m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
-                if m["score"] >= 0.60 and m.get("answer")
-            ][:3]
+#             selected_matches = [
+#                 m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
+#                 if m["score"] >= 0.60 and m.get("answer")
+#             ][:3]
 
-            formatted_matches = []
+#             formatted_matches = []
 
-            for m in selected_matches:
+#             for m in selected_matches:
 
-                answer = m.get("answer") or ""
-                question = m.get("question") or ""
+#                 answer = m.get("answer") or ""
+#                 question = m.get("question") or ""
 
-                short_answer = (
-                    answer[:300].rsplit(' ', 1)[0] + "..."
-                    if len(answer) > 300
-                    else answer
-                )
+#                 short_answer = (
+#                     answer[:300].rsplit(' ', 1)[0] + "..."
+#                     if len(answer) > 300
+#                     else answer
+#                 )
 
-                formatted_matches.append(
-                    f"Previous QnA (score {round(m['score'],2)}):\n"
-                    f"Q: {question}\n"
-                    f"A: {short_answer}"
-                )
+#                 formatted_matches.append(
+#                     f"Previous QnA (score {round(m['score'],2)}):\n"
+#                     f"Q: {question}\n"
+#                     f"A: {short_answer}"
+#                 )
 
-            sl_context = "\n\n".join(formatted_matches)
+#             sl_context = "\n\n".join(formatted_matches)
 
-            use_sl_as_context = True
+#             use_sl_as_context = True
 
-        # 🔴 LOW → ignore
-        else:
-            use_sl_as_context = False
-            sl_context = None
+#         # 🔴 LOW → ignore
+#         else:
+#             use_sl_as_context = False
+#             sl_context = None
 
-    # 🔍 DEBUG
-    print("USING SL CONTEXT:", use_sl_as_context)
-
-
-    # -------------------------------
-    # STEP 1: INIT
-    # -------------------------------
-    qna_id = None
-    chart_details = []
-    all_chart_matches = []
-
-    # -------------------------------
-    # STEP 2: FETCH CHART + STORE QNA
-    # -------------------------------
-    if use_chart:
-        chart_details = get_chart_details_bulk(chart_ids)
-
-        if chart_details:
-            primary_chart = chart_details[0]
-
-            qna_id = insert_qna(
-                primary_chart["user_id"],
-                primary_chart["profile_id"],
-                primary_chart["chart_id"],
-                request.question
-            )
-
-    # -------------------------------
-    # STEP 3: EMBEDDING
-    # -------------------------------
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
-    query_embedding = response.data[0].embedding
-
-    # -------------------------------
-    # STEP 4: CHART RETRIEVAL
-    # -------------------------------
-    if use_chart and chart_details:
-        for chart in chart_details:
-            results = query_chart_embeddings(
-                query_embedding,
-                chart["user_id"],
-                chart["profile_id"],
-                chart["chart_id"],
-                top_k=10
-            )
-            all_chart_matches.extend(results.matches)
+#     # 🔍 DEBUG
+#     print("USING SL CONTEXT:", use_sl_as_context)
 
 
-    # -------------------------------
-    # STEP 5: KB RETRIEVAL
-    # -------------------------------
+#     # -------------------------------
+#     # STEP 1: INIT
+#     # -------------------------------
+#     qna_id = None
+#     chart_details = []
+#     all_chart_matches = []
 
-    kb_results = None
+#     # -------------------------------
+#     # STEP 2: FETCH CHART + STORE QNA
+#     # -------------------------------
+#     if use_chart:
+#         chart_details = get_chart_details_bulk(chart_ids)
 
-    if use_kb:
+#         if chart_details:
+#             primary_chart = chart_details[0]
 
-        exact_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
+#             qna_id = insert_qna(
+#                 primary_chart["user_id"],
+#                 primary_chart["profile_id"],
+#                 primary_chart["chart_id"],
+#                 request.question
+#             )
 
-        if exact_match:
+#     # -------------------------------
+#     # STEP 3: EMBEDDING
+#     # -------------------------------
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
+#     query_embedding = response.data[0].embedding
 
-            print("USING EXACT MATCH")
-
-            kb_results = [exact_match]
-
-        else:
-
-            print("USING VECTOR SEARCH")
-
-            kb_results = query_kb_embeddings_filtered(
-                query_embedding,
-                kb_ids,
-                top_k=15
-            )
-
-    # -------------------------------
-    # STEP 6: DEBUG
-    # -------------------------------
-
-    print("\n--- KB RESULTS ---")
-
-    if kb_results:
-
-        if isinstance(kb_results, list):
-            for match in kb_results:
-                print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
-        else:
-            for match in kb_results.matches:
-                print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
-
-    # -------------------------------
-    # STEP 7: CONTEXT BUILDING
-    # -------------------------------
-    if not use_chart and not use_kb:
-        context = ""   # 🔥 PURE LLM MODE
-    else:
-        context = build_context(all_chart_matches, kb_results)
-
-    # -------------------------------
-    # Inject SL context (if medium confidence)
-    # -------------------------------
-    print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
-
-    if use_sl_as_context and sl_context:
-
-        context = (
-            "Relevant past learned answers (use as base, refine and synthesize):\n"
-            f"{sl_context}\n\n"
-            f"{context}"
-        )
-
-    print("\n--- FINAL CONTEXT ---")
-    print(context[:1000])
+#     # -------------------------------
+#     # STEP 4: CHART RETRIEVAL
+#     # -------------------------------
+#     if use_chart and chart_details:
+#         for chart in chart_details:
+#             results = query_chart_embeddings(
+#                 query_embedding,
+#                 chart["user_id"],
+#                 chart["profile_id"],
+#                 chart["chart_id"],
+#                 top_k=10
+#             )
+#             all_chart_matches.extend(results.matches)
 
 
-    # -------------------------------
-    # Inject previous conversation
-    # -------------------------------
-    if request.previous_question and request.previous_answer:
+#     # -------------------------------
+#     # STEP 5: KB RETRIEVAL
+#     # -------------------------------
 
-        conversation_context = f"""
-    PREVIOUS CONVERSATION:
+#     kb_results = None
 
-    User: {request.previous_question}
+#     if use_kb:
 
-    Astrologer: {request.previous_answer}
-    """
+#         exact_match = find_exact_kb_match(
+#             kb_ids[0],
+#             request.question
+#         )
 
-        context = f"{conversation_context}\n\n{context}"
+#         if exact_match:
 
-    # -------------------------------
-    # STEP 8: GENERATE ANSWER
-    # -------------------------------
-    print("MODEL USED: GPT-4.1-MINI")
+#             print("USING EXACT MATCH")
 
-    answer = generate_answer_gpt_mini(
-        request.question,
-        context
-    )
+#             kb_results = [exact_match]
 
-    # -------------------------------
-    # STEP 9: STORE ANSWER
-    # -------------------------------
-    if qna_id:
-        update_qna_answer(qna_id, answer)
+#         else:
 
-    # -------------------------------
-    # STEP 10: RESPONSE
-    # -------------------------------
-    c_rttl = round(
-        (time.time() - start_time) * 1000,
-        2
-    )
+#             print("USING VECTOR SEARCH")
 
-    print("TOTAL RTTL (ms):", c_rttl)
+#             kb_results = query_kb_embeddings_filtered(
+#                 query_embedding,
+#                 kb_ids,
+#                 top_k=15
+#             )
 
-    return {
-        "source": "gpt-4.1-mini",
-        "used_sl": use_sl_as_context,
-        "used_kb": use_kb,
-        "used_chart": use_chart,
-        "rttl": c_rttl,
-        "answer": answer
-    }
+#     # -------------------------------
+#     # STEP 6: DEBUG
+#     # -------------------------------
+
+#     print("\n--- KB RESULTS ---")
+
+#     if kb_results:
+
+#         if isinstance(kb_results, list):
+#             for match in kb_results:
+#                 print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
+#         else:
+#             for match in kb_results.matches:
+#                 print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+
+#     # -------------------------------
+#     # STEP 7: CONTEXT BUILDING
+#     # -------------------------------
+#     if not use_chart and not use_kb:
+#         context = ""   # 🔥 PURE LLM MODE
+#     else:
+#         context = build_context(all_chart_matches, kb_results)
+
+#     # -------------------------------
+#     # Inject SL context (if medium confidence)
+#     # -------------------------------
+#     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
+
+#     if use_sl_as_context and sl_context:
+
+#         context = (
+#             "Relevant past learned answers (use as base, refine and synthesize):\n"
+#             f"{sl_context}\n\n"
+#             f"{context}"
+#         )
+
+#     print("\n--- FINAL CONTEXT ---")
+#     print(context[:1000])
 
 
-@app.post("/qna_gemini")
-def qna_gemini(request: QuestionRequest):
+#     # -------------------------------
+#     # Inject previous conversation
+#     # -------------------------------
+#     if request.previous_question and request.previous_answer:
 
-    start_time = time.time()
+#         conversation_context = f"""
+#     PREVIOUS CONVERSATION:
 
-    chart_ids = request.chart_ids
+#     User: {request.previous_question}
+
+#     Astrologer: {request.previous_answer}
+#     """
+
+#         context = f"{conversation_context}\n\n{context}"
+
+#     # -------------------------------
+#     # STEP 8: GENERATE ANSWER
+#     # -------------------------------
+#     print("MODEL USED: GPT-4.1-MINI")
+
+#     answer = generate_answer_gpt_mini(
+#         request.question,
+#         context
+#     )
+
+#     # -------------------------------
+#     # STEP 9: STORE ANSWER
+#     # -------------------------------
+#     if qna_id:
+#         update_qna_answer(qna_id, answer)
+
+#     # -------------------------------
+#     # STEP 10: RESPONSE
+#     # -------------------------------
+#     c_rttl = round(
+#         (time.time() - start_time) * 1000,
+#         2
+#     )
+
+#     print("TOTAL RTTL (ms):", c_rttl)
+
+#     return {
+#         "source": "gpt-4.1-mini",
+#         "used_sl": use_sl_as_context,
+#         "used_kb": use_kb,
+#         "used_chart": use_chart,
+#         "rttl": c_rttl,
+#         "answer": answer
+#     }
+
+
+# @app.post("/qna_gemini")
+# def qna_gemini(request: QuestionRequest):
+
+#     start_time = time.time()
+
+#     chart_ids = request.chart_ids
     
-    kb_ids = request.kb_id
+#     kb_ids = request.kb_id
 
-    # normalize safely
-    if isinstance(kb_ids, str):
-        kb_ids = [kb_ids]
-    elif not isinstance(kb_ids, list):
-        kb_ids = []
+#     # normalize safely
+#     if isinstance(kb_ids, str):
+#         kb_ids = [kb_ids]
+#     elif not isinstance(kb_ids, list):
+#         kb_ids = []
 
-    kb_id = kb_ids[0] if kb_ids else ""
+#     kb_id = kb_ids[0] if kb_ids else ""
 
-    print("KB IDS:", kb_ids)
-    print("KB ID USED:", kb_id)
+#     print("KB IDS:", kb_ids)
+#     print("KB ID USED:", kb_id)
 
-    use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
-    use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
-    use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
+#     use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
+#     use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+#     use_sl = request.sl_id and request.sl_id != ["0"] and request.sl_id != [""]
 
-    print("SL IDS:", request.sl_id)
-    print("USE SL:", use_sl)
+#     print("SL IDS:", request.sl_id)
+#     print("USE SL:", use_sl)
 
-    # -------------------------------
-    # STEP 0: Initialize SL vars
-    # -------------------------------
-    use_sl_as_context = False
+#     # -------------------------------
+#     # STEP 0: Initialize SL vars
+#     # -------------------------------
+#     use_sl_as_context = False
 
-    ttl_q_embedding = 0
-    ttl_sl_match = 0
-    ttl_kb_context = 0
-    ttl_chart_context = 0
-    ttl_reasoning = 0
-    ttl_delivery = 0
+#     ttl_q_embedding = 0
+#     ttl_sl_match = 0
+#     ttl_kb_context = 0
+#     ttl_chart_context = 0
+#     ttl_reasoning = 0
+#     ttl_delivery = 0
     
-    # -------------------------------
-    # STEP 0.1: Check SL memory
-    # -------------------------------
-    if use_sl:
+#     # -------------------------------
+#     # STEP 0.1: Check SL memory
+#     # -------------------------------
+#     if use_sl:
 
-        sl_start = time.perf_counter()
+#         sl_start = time.perf_counter()
 
-        sl_result = qna_sl_search(
-            QnaSearchRequest(
-                question=request.question,
-                kb_id=kb_id
-            )
-        )
+#         sl_result = qna_sl_search(
+#             QnaSearchRequest(
+#                 question=request.question,
+#                 kb_id=kb_id
+#             )
+#         )
 
-        ttl_sl_match = round(
-            (time.perf_counter() - sl_start) * 1000,
-            2
-        )
+#         ttl_sl_match = round(
+#             (time.perf_counter() - sl_start) * 1000,
+#             2
+#         )
 
-        sl_found = sl_result.get("found")
-        matches = sl_result.get("matches", [])
+#         sl_found = sl_result.get("found")
+#         matches = sl_result.get("matches", [])
 
-        if not matches:
-            sl_found = False
-            sl_score = None
-            second = None
-        else:
-            best = matches[0]
-            second = matches[1] if len(matches) > 1 else None
-            sl_score = best["score"]
+#         if not matches:
+#             sl_found = False
+#             sl_score = None
+#             second = None
+#         else:
+#             best = matches[0]
+#             second = matches[1] if len(matches) > 1 else None
+#             sl_score = best["score"]
 
-    else:
+#     else:
 
-        print("SL DISABLED")
+#         print("SL DISABLED")
 
-        sl_found = False
-        matches = []
-        sl_score = None
-        second = None
+#         sl_found = False
+#         matches = []
+#         sl_score = None
+#         second = None
         
-    # 🔍 DEBUG PRINTS
-    print("SL FOUND:", sl_found)
-    print("FIRST MATCH SCORE:", sl_score)
-    print("SECOND MATCH SCORE:", second["score"] if second else None)
-    print("MATCH COUNT:", len(matches))
-    print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
+#     # 🔍 DEBUG PRINTS
+#     print("SL FOUND:", sl_found)
+#     print("FIRST MATCH SCORE:", sl_score)
+#     print("SECOND MATCH SCORE:", second["score"] if second else None)
+#     print("MATCH COUNT:", len(matches))
+#     print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
 
-    # -------------------------
-    # STEP 0.2: Decision logic 
-    # -------------------------
-    use_sl_as_context = False
-    sl_context = None
+#     # -------------------------
+#     # STEP 0.2: Decision logic 
+#     # -------------------------
+#     use_sl_as_context = False
+#     sl_context = None
 
-    if sl_found and sl_score is not None:
+#     if sl_found and sl_score is not None:
 
-        # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
-        if sl_score >= 0.60:
+#         # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
+#         if sl_score >= 0.60:
 
-            selected_matches = [
-                m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
-                if m["score"] >= 0.60 and m.get("answer")
-            ][:3]
+#             selected_matches = [
+#                 m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
+#                 if m["score"] >= 0.60 and m.get("answer")
+#             ][:3]
 
-            formatted_matches = []
+#             formatted_matches = []
 
-            for m in selected_matches:
+#             for m in selected_matches:
 
-                answer = m.get("answer") or ""
-                question = m.get("question") or ""
+#                 answer = m.get("answer") or ""
+#                 question = m.get("question") or ""
 
-                short_answer = (
-                    answer[:300].rsplit(' ', 1)[0] + "..."
-                    if len(answer) > 300
-                    else answer
-                )
+#                 short_answer = (
+#                     answer[:300].rsplit(' ', 1)[0] + "..."
+#                     if len(answer) > 300
+#                     else answer
+#                 )
 
-                formatted_matches.append(
-                    f"Previous QnA (score {round(m['score'],2)}):\n"
-                    f"Q: {question}\n"
-                    f"A: {short_answer}"
-                )
+#                 formatted_matches.append(
+#                     f"Previous QnA (score {round(m['score'],2)}):\n"
+#                     f"Q: {question}\n"
+#                     f"A: {short_answer}"
+#                 )
 
-            sl_context = "\n\n".join(formatted_matches)
+#             sl_context = "\n\n".join(formatted_matches)
 
-            use_sl_as_context = True
+#             use_sl_as_context = True
 
-        # 🔴 LOW → ignore
-        else:
-            use_sl_as_context = False
-            sl_context = None
+#         # 🔴 LOW → ignore
+#         else:
+#             use_sl_as_context = False
+#             sl_context = None
 
-    # 🔍 DEBUG
-    print("USING SL CONTEXT:", use_sl_as_context)
+#     # 🔍 DEBUG
+#     print("USING SL CONTEXT:", use_sl_as_context)
 
-    # -------------------------------
-    # STEP 1: INIT
-    # -------------------------------
-    qna_id = None
-    chart_details = []
-    all_chart_matches = []
+#     # -------------------------------
+#     # STEP 1: INIT
+#     # -------------------------------
+#     qna_id = None
+#     chart_details = []
+#     all_chart_matches = []
 
-    # -------------------------------
-    # STEP 2: FETCH CHART + STORE QNA
-    # -------------------------------
-    if use_chart:
-        chart_details = get_chart_details_bulk(chart_ids)
+#     # -------------------------------
+#     # STEP 2: FETCH CHART + STORE QNA
+#     # -------------------------------
+#     if use_chart:
+#         chart_details = get_chart_details_bulk(chart_ids)
 
-        if chart_details:
-            primary_chart = chart_details[0]
+#         if chart_details:
+#             primary_chart = chart_details[0]
 
-            qna_id = insert_qna(
-                primary_chart["user_id"],
-                primary_chart["profile_id"],
-                primary_chart["chart_id"],
-                request.question
-            )
+#             qna_id = insert_qna(
+#                 primary_chart["user_id"],
+#                 primary_chart["profile_id"],
+#                 primary_chart["chart_id"],
+#                 request.question
+#             )
 
-    # -------------------------------
-    # STEP 3: EMBEDDING
-    # -------------------------------
-    embedding_start = time.perf_counter()
+#     # -------------------------------
+#     # STEP 3: EMBEDDING
+#     # -------------------------------
+#     embedding_start = time.perf_counter()
 
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
 
-    ttl_q_embedding = round(
-        (time.perf_counter() - embedding_start) * 1000,
-        2
-    )
-    query_embedding = response.data[0].embedding
+#     ttl_q_embedding = round(
+#         (time.perf_counter() - embedding_start) * 1000,
+#         2
+#     )
+#     query_embedding = response.data[0].embedding
 
-    # -------------------------------
-    # STEP 4: CHART RETRIEVAL
-    # -------------------------------
-    chart_start = time.perf_counter()
+#     # -------------------------------
+#     # STEP 4: CHART RETRIEVAL
+#     # -------------------------------
+#     chart_start = time.perf_counter()
     
-    if use_chart and chart_details:
-        for chart in chart_details:
-            results = query_chart_embeddings(
-                query_embedding,
-                chart["user_id"],
-                chart["profile_id"],
-                chart["chart_id"],
-                top_k=10
-            )
-            all_chart_matches.extend(results.matches)
+#     if use_chart and chart_details:
+#         for chart in chart_details:
+#             results = query_chart_embeddings(
+#                 query_embedding,
+#                 chart["user_id"],
+#                 chart["profile_id"],
+#                 chart["chart_id"],
+#                 top_k=10
+#             )
+#             all_chart_matches.extend(results.matches)
 
-    ttl_chart_context = round(
-        (time.perf_counter() - chart_start) * 1000,
-        2
-    )
+#     ttl_chart_context = round(
+#         (time.perf_counter() - chart_start) * 1000,
+#         2
+#     )
 
 
-    # -------------------------------
-    # STEP 5: KB RETRIEVAL
-    # -------------------------------
+#     # -------------------------------
+#     # STEP 5: KB RETRIEVAL
+#     # -------------------------------
 
-    kb_results = None
+#     kb_results = None
 
-    kb_start = time.perf_counter()
+#     kb_start = time.perf_counter()
 
-    if use_kb:
+#     if use_kb:
 
-        exact_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
+#         exact_match = find_exact_kb_match(
+#             kb_ids[0],
+#             request.question
+#         )
 
-        if exact_match:
+#         if exact_match:
 
-            print("USING EXACT MATCH")
+#             print("USING EXACT MATCH")
 
-            kb_results = [exact_match]
+#             kb_results = [exact_match]
 
-        else:
+#         else:
 
-            print("USING VECTOR SEARCH")
+#             print("USING VECTOR SEARCH")
 
-            kb_results = query_kb_embeddings_filtered(
-                query_embedding,
-                kb_ids,
-                top_k=15
-            )
+#             kb_results = query_kb_embeddings_filtered(
+#                 query_embedding,
+#                 kb_ids,
+#                 top_k=15
+#             )
 
-    ttl_kb_context = round(
-        (time.perf_counter() - kb_start) * 1000,
-        2
-    )
+#     ttl_kb_context = round(
+#         (time.perf_counter() - kb_start) * 1000,
+#         2
+#     )
 
-    # -------------------------------
-    # STEP 6: DEBUG
-    # -------------------------------
+#     # -------------------------------
+#     # STEP 6: DEBUG
+#     # -------------------------------
 
-    print("\n--- KB RESULTS ---")
+#     print("\n--- KB RESULTS ---")
 
-    if kb_results:
+#     if kb_results:
 
-        if isinstance(kb_results, list):
-            for match in kb_results:
-                print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
-        else:
-            for match in kb_results.matches:
-                print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+#         if isinstance(kb_results, list):
+#             for match in kb_results:
+#                 print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
+#         else:
+#             for match in kb_results.matches:
+#                 print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
 
-    # --------------------------------
-    # STEP 7: BUILD RETRIEVAL CONTEXT
-    # --------------------------------
-    prompt_start = time.perf_counter()
+#     # --------------------------------
+#     # STEP 7: BUILD RETRIEVAL CONTEXT
+#     # --------------------------------
+#     prompt_start = time.perf_counter()
     
-    if not use_chart and not use_kb:
-        context = ""   # 🔥 PURE LLM MODE
-    else:
-        context = build_context(all_chart_matches, kb_results)
+#     if not use_chart and not use_kb:
+#         context = ""   # 🔥 PURE LLM MODE
+#     else:
+#         context = build_context(all_chart_matches, kb_results)
 
-    # -----------------------------------------
-    # Inject SL context (if medium confidence)
-    # -----------------------------------------
-    print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
+#     # -----------------------------------------
+#     # Inject SL context (if medium confidence)
+#     # -----------------------------------------
+#     print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
 
-    if use_sl_as_context and sl_context:
+#     if use_sl_as_context and sl_context:
 
-        context = (
-            "Relevant past learned answers (use as base, refine and synthesize):\n"
-            f"{sl_context}\n\n"
-            f"{context}"
-        )
+#         context = (
+#             "Relevant past learned answers (use as base, refine and synthesize):\n"
+#             f"{sl_context}\n\n"
+#             f"{context}"
+#         )
 
-    print("\n--- FINAL CONTEXT ---")
-    print(context[:1000])
+#     print("\n--- FINAL CONTEXT ---")
+#     print(context[:1000])
 
 
-    # -------------------------------
-    # Inject previous conversation
-    # -------------------------------
-    if request.previous_question and request.previous_answer:
+#     # -------------------------------
+#     # Inject previous conversation
+#     # -------------------------------
+#     if request.previous_question and request.previous_answer:
 
-        conversation_context = f"""
-    PREVIOUS CONVERSATION:
+#         conversation_context = f"""
+#     PREVIOUS CONVERSATION:
 
-    User: {request.previous_question}
+#     User: {request.previous_question}
 
-    Astrologer: {request.previous_answer}
-    """
+#     Astrologer: {request.previous_answer}
+#     """
 
-        context = f"{conversation_context}\n\n{context}"
+#         context = f"{conversation_context}\n\n{context}"
 
-    ttl_context_build = round(
-        (time.perf_counter() - prompt_start) * 1000,
-        2
-    )
+#     ttl_context_build = round(
+#         (time.perf_counter() - prompt_start) * 1000,
+#         2
+#     )
 
-    # -------------------------------
-    # STEP 8: GENERATE ANSWER
-    # -------------------------------
-    reasoning_start = time.perf_counter()
+#     # -------------------------------
+#     # STEP 8: GENERATE ANSWER
+#     # -------------------------------
+#     reasoning_start = time.perf_counter()
 
-    answer = generate_answer_gemini(
-        request.question,
-        context
-    )
+#     answer = generate_answer_gemini(
+#         request.question,
+#         context
+#     )
 
-    ttl_reasoning = round(
-        (time.perf_counter() - reasoning_start) * 1000,
-        2
-    )
+#     ttl_reasoning = round(
+#         (time.perf_counter() - reasoning_start) * 1000,
+#         2
+#     )
 
-    # -------------------------------
-    # STEP 9: STORE ANSWER
-    # -------------------------------
-    delivery_start = time.perf_counter()
+#     # -------------------------------
+#     # STEP 9: STORE ANSWER
+#     # -------------------------------
+#     delivery_start = time.perf_counter()
     
-    if qna_id:
-        update_qna_answer(qna_id, answer)
+#     if qna_id:
+#         update_qna_answer(qna_id, answer)
 
-    ttl_delivery = round(
-        (time.perf_counter() - delivery_start) * 1000,
-        2
-    )
+#     ttl_delivery = round(
+#         (time.perf_counter() - delivery_start) * 1000,
+#         2
+#     )
 
-    # -------------------------------
-    # STEP 10: RESPONSE
-    # -------------------------------
-    c_rttl = round(
-        (time.time() - start_time) * 1000,
-        2
-    )
+#     # -------------------------------
+#     # STEP 10: RESPONSE
+#     # -------------------------------
+#     c_rttl = round(
+#         (time.time() - start_time) * 1000,
+#         2
+#     )
 
-    ttl_breakdown = [
-        {
-            "stage": "ttl_q_embedding",
-            "time_ms": ttl_q_embedding
-        },
-        {
-            "stage": "ttl_sl_match",
-            "time_ms": ttl_sl_match
-        },
-        {
-            "stage": "ttl_kb_context",
-            "time_ms": ttl_kb_context
-        },
-        {
-            "stage": "ttl_chart_context",
-            "time_ms": ttl_chart_context
-        },
-        {
-            "stage": "ttl_context_build",
-            "time_ms": ttl_context_build
-        },
-        {
-            "stage": "ttl_reasoning",
-            "time_ms": ttl_reasoning
-        },
-        {
-            "stage": "ttl_delivery",
-            "time_ms": ttl_delivery
-        }
-    ]
+#     ttl_breakdown = [
+#         {
+#             "stage": "ttl_q_embedding",
+#             "time_ms": ttl_q_embedding
+#         },
+#         {
+#             "stage": "ttl_sl_match",
+#             "time_ms": ttl_sl_match
+#         },
+#         {
+#             "stage": "ttl_kb_context",
+#             "time_ms": ttl_kb_context
+#         },
+#         {
+#             "stage": "ttl_chart_context",
+#             "time_ms": ttl_chart_context
+#         },
+#         {
+#             "stage": "ttl_context_build",
+#             "time_ms": ttl_context_build
+#         },
+#         {
+#             "stage": "ttl_reasoning",
+#             "time_ms": ttl_reasoning
+#         },
+#         {
+#             "stage": "ttl_delivery",
+#             "time_ms": ttl_delivery
+#         }
+#     ]
 
-    print("TOTAL RTTL (ms):", c_rttl)
+#     print("TOTAL RTTL (ms):", c_rttl)
 
-    print("TTL BREAKDOWN:")
-    print(ttl_breakdown)
+#     print("TTL BREAKDOWN:")
+#     print(ttl_breakdown)
 
-    return {
-        "source": "gemini-2.5-flash",
+#     return {
+#         "source": "gemini-2.5-flash",
 
-        "used_sl": use_sl_as_context,
-        "used_kb": use_kb,
-        "used_chart": use_chart,
+#         "used_sl": use_sl_as_context,
+#         "used_kb": use_kb,
+#         "used_chart": use_chart,
 
-        "rttl": c_rttl,
+#         "rttl": c_rttl,
 
-        "c_ttl": ttl_breakdown,
+#         "c_ttl": ttl_breakdown,
 
-        "answer": answer
-    }
+#         "answer": answer
+#     }
 
 
 # @app.post("/welcome_message")
@@ -2041,501 +2041,501 @@ def qna_gemini(request: QuestionRequest):
 #         "messages": welcome_lines
 #     }
 
-@app.post("/welcome_message")
-def welcome_message(request: WelcomeRequest):
+# @app.post("/welcome_message")
+# def welcome_message(request: WelcomeRequest):
 
-    q = request.question.lower()
+#     q = request.question.lower()
 
-    # -------------------------------
-    # CASE 1: Greeting
-    # -------------------------------
-    if "my name is" in q:
+#     # -------------------------------
+#     # CASE 1: Greeting
+#     # -------------------------------
+#     if "my name is" in q:
 
-        name = q.split("my name is")[-1].strip().replace(".", "").title()
+#         name = q.split("my name is")[-1].strip().replace(".", "").title()
 
-        return {
-            "answer": f"Hello {name}"
-        }
+#         return {
+#             "answer": f"Hello {name}"
+#         }
 
-    # -------------------------------
-    # CASE 2: Generic onboarding
-    # -------------------------------
-    if "ask questions about myself" in q:
+#     # -------------------------------
+#     # CASE 2: Generic onboarding
+#     # -------------------------------
+#     if "ask questions about myself" in q:
 
-        return {
-            "answer": "Feel free to ask anything you would like guidance about."
-        }
+#         return {
+#             "answer": "Feel free to ask anything you would like guidance about."
+#         }
 
-    # -------------------------------
-    # CASE 2.5: Simple Hello
-    # -------------------------------
-    if q.strip() in ["hello", "hi", "hey"]:
+#     # -------------------------------
+#     # CASE 2.5: Simple Hello
+#     # -------------------------------
+#     if q.strip() in ["hello", "hi", "hey"]:
 
-        return {
-            "answer": "Hello ✨"
-        }
+#         return {
+#             "answer": "Hello ✨"
+#         }
 
-    # -------------------------------
-    # CASE 3: Ascendant / Dasha
-    # -------------------------------
-    chart_details = get_chart_details_bulk(request.chart_ids)
+#     # -------------------------------
+#     # CASE 3: Ascendant / Dasha
+#     # -------------------------------
+#     chart_details = get_chart_details_bulk(request.chart_ids)
 
-    if not chart_details:
-        return {
-            "answer": "I could not find your chart details."
-        }
+#     if not chart_details:
+#         return {
+#             "answer": "I could not find your chart details."
+#         }
 
-    all_chart_matches = []
+#     all_chart_matches = []
 
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
 
-    query_embedding = response.data[0].embedding
+#     query_embedding = response.data[0].embedding
 
-    for chart in chart_details:
+#     for chart in chart_details:
 
-        results = query_chart_embeddings(
-            query_embedding,
-            chart["user_id"],
-            chart["profile_id"],
-            chart["chart_id"],
-            top_k=20
-        )
+#         results = query_chart_embeddings(
+#             query_embedding,
+#             chart["user_id"],
+#             chart["profile_id"],
+#             chart["chart_id"],
+#             top_k=20
+#         )
 
-        all_chart_matches.extend(results.matches)
+#         all_chart_matches.extend(results.matches)
 
-    # DEBUG HERE
-    print("\n===== TOP RETRIEVED CHUNKS =====")
+#     # DEBUG HERE
+#     print("\n===== TOP RETRIEVED CHUNKS =====")
 
-    for i, m in enumerate(all_chart_matches[:20], 1):
-        print(
-            f"{i}. SCORE={round(m.score,3)} | "
-            f"{m.metadata.get('text','')[:200]}"
-        )
+#     for i, m in enumerate(all_chart_matches[:20], 1):
+#         print(
+#             f"{i}. SCORE={round(m.score,3)} | "
+#             f"{m.metadata.get('text','')[:200]}"
+#         )
 
-    context = build_context(all_chart_matches, None)
+#     context = build_context(all_chart_matches, None)
 
-    print("\n===== FINAL CONTEXT =====")
-    print(context[:5000])
+#     print("\n===== FINAL CONTEXT =====")
+#     print(context[:5000])
 
-    answer = generate_answer(request.question, context)
+#     answer = generate_answer(request.question, context)
 
-    return {
-        "answer": answer
-    }
+#     return {
+#         "answer": answer
+#     }
 
 
-@app.post("/delete_kb")
-def delete_kb(request: DeleteKBRequest):
+# @app.post("/delete_kb")
+# def delete_kb(request: DeleteKBRequest):
 
-    job_id = request.job_id
+#     job_id = request.job_id
 
-    # 1. Get job
-    job = get_job(job_id)
+#     # 1. Get job
+#     job = get_job(job_id)
 
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+#     if not job:
+#         raise HTTPException(status_code=404, detail="Job not found")
 
-    if job["status"] == "processing":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete while processing is in progress"
-        )
+#     if job["status"] == "processing":
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Cannot delete while processing is in progress"
+#         )
 
-    file_id = job["file_id"]
+#     file_id = job["file_id"]
 
-    # DEBUG (IMPORTANT)
-    print("🧾 DELETE JOB:", job)
-    print("📁 FILE_ID:", file_id)
+#     # DEBUG (IMPORTANT)
+#     print("🧾 DELETE JOB:", job)
+#     print("📁 FILE_ID:", file_id)
 
-    try:
-        # 2. Delete embeddings (Pinecone)
-        print(f"🧹 Deleting embeddings for file_id: {file_id}")
-        delete_embeddings(file_id)
-        print(f"✅ Embeddings deleted for file_id: {file_id}")
+#     try:
+#         # 2. Delete embeddings (Pinecone)
+#         print(f"🧹 Deleting embeddings for file_id: {file_id}")
+#         delete_embeddings(file_id)
+#         print(f"✅ Embeddings deleted for file_id: {file_id}")
 
-        # 3. Delete file from S3
-        from storage import delete_file
-        delete_file(file_id)
+#         # 3. Delete file from S3
+#         from storage import delete_file
+#         delete_file(file_id)
 
-    except Exception as e:
-        print(f"⚠️ Delete error (continuing): {e}")
+#     except Exception as e:
+#         print(f"⚠️ Delete error (continuing): {e}")
 
-    # 🔥 ALWAYS update DB (no matter what)
-    update_job(job_id, "deleted", int(time.time()))
+#     # 🔥 ALWAYS update DB (no matter what)
+#     update_job(job_id, "deleted", int(time.time()))
 
-    return {
-        "status": "success",
-        "message": f"KB deleted for job_id: {job_id}"
-    }
-
-
-@app.post("/delete_chart")
-def delete_chart(request: DeleteChartRequest):
-
-    job_id = request.job_id
-
-    # 1. Get chart job
-    chart_job = get_chart_job(job_id)
-
-    if not chart_job:
-        raise HTTPException(status_code=404, detail="Chart not found")
-
-    if chart_job["status"] == "processing":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete while processing"
-        )
-
-    file_id = chart_job["file_id"]
-
-    if not file_id:
-        raise HTTPException(
-            status_code=400,
-            detail="file_id missing for this chart job"
-        )    
-
-    print("🧾 DELETE CHART JOB:", chart_job)
-    print("📁 FILE_ID:", file_id)
-
-    try:
-        # 2. Delete embeddings
-        print(f"🧹 Deleting embeddings for file_id: {file_id}")
-        delete_embeddings(file_id)
-        print(f"✅ Embeddings deleted for file_id: {file_id}")
-
-        # 3. Delete files from S3
-        from storage import delete_file
-
-        delete_file(file_id)
-
-        print(f"✅ S3 cleanup completed for file_id: {file_id}")
-
-    except Exception as e:
-        print(f"⚠️ Delete error: {e}")
-
-    # 🔥 4. SOFT DELETE (THIS WAS MISSING)
-    soft_delete_chart_job(job_id)
-
-    return {
-        "status": "success",
-        "message": f"Chart deleted for job_id: {job_id}"
-    }
-
-
-@app.post("/qna_sl")
-def qna_sl(request: QnaSLRequest):
-
-    # -------------------------------
-    # STEP 1: CREATE EMBEDDING
-    # -------------------------------
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
-    query_embedding = response.data[0].embedding
-
-    # -------------------------------
-    # STEP 2: RETRIEVE KB ONLY
-    # -------------------------------
-    kb_results = query_kb_embeddings_filtered(
-        query_embedding,
-        [request.kb_id],
-        top_k=5
-    )
-
-    # -------------------------------
-    # STEP 3: BUILD CONTEXT
-    # -------------------------------
-    context = ""
-    for match in kb_results.matches:
-        context += match.metadata.get("text", "") + "\n"
-
-    context = context[:3000]
-
-    # -------------------------------
-    # STEP 4: GENERATE ANSWER
-    # -------------------------------
-    prompt = build_prompt(request.question, context)
-
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        temperature=0.7,
-        max_tokens=220,
-        messages=[
-            {"role": "system", "content": "You are a careful domain expert."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    answer = response.choices[0].message.content
-
-    # -------------------------------
-    # STEP 5: STORE
-    # -------------------------------
-    qna_id = insert_qna_sl(
-        request.kb_id,
-        request.question,
-        answer
-    )
-
-    # -------------------------------
-    # STEP 6: RETURN
-    # -------------------------------
-    return {
-        "qna_id": qna_id,
-        "answer": answer
-    }
-
-
-@app.post("/qna_sl_validation")
-def qna_sl_validation(request: QnaSLValidationRequest):
-
-    table_map = {
-        "sl": "qna_sl_logs",
-        "generated": "generated_qnas"
-    }
-
-    if request.source_type not in table_map:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid source_type"
-        )
-
-    table_name = table_map[request.source_type]
-
-    # -------------------------------
-    # STEP 1: FETCH ORIGINAL QNA
-    # -------------------------------
-    record = get_qna_sl(
-        table_name,
-        request.qna_id
-    )
-
-    if not record:
-        raise HTTPException(status_code=404, detail="QnA not found")
-
-    # -------------------------------
-    # STEP 2: DECIDE FINAL ANSWER
-    # -------------------------------
-    original_answer = (
-        record.get("llm_answer")
-        or record.get("answer")
-    )
-
-    if request.is_valid:
-
-        final_answer = original_answer
-
-    else:
-
-        if not request.corrected_answer:
-            raise HTTPException(
-                status_code=400,
-                detail="Corrected answer required when invalid"
-            )
-
-        final_answer = request.corrected_answer
-
-    # -------------------------------
-    # STEP 3: UPDATE DB
-    # -------------------------------
-    update_qna_sl_validation(
-        table_name=table_name,
-        qna_id=request.qna_id,
-        is_valid=request.is_valid,
-        llm_answer=original_answer,
-        corrected_answer=request.corrected_answer
-    )
-
-    # -------------------------------
-    # STEP 4: CREATE EMBEDDING
-    # -------------------------------
-    text = record['question']
-
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    embedding = response.data[0].embedding
-
-    print("KB_ID SAVED:", record["kb_id"])
-    print("QUESTION SAVED:", record["question"])
-
-    # -------------------------------
-    # STEP 5: STORE IN VECTOR DB
-    # -------------------------------
-    upsert_embeddings(
-        file_id=f"{request.source_type}_{request.qna_id}",
-        chunks=[text],
-        embeddings=[embedding],
-        metadata={
-            "type": "qna_sl",
-            "kb_id": str(record["kb_id"]).strip(),
-            "question": record["question"],
-            "answer": final_answer,
-            "source_type": request.source_type
-        }
-    )
-
-    # -------------------------------
-    # STEP 6: RESPONSE
-    # -------------------------------
-    return {
-        "status": "validated and learned"
-    }
-
-
-@app.post("/qna_ml_submit")
-def qna_ml_submit(request: QnaMLRequest):
-
-    results = []
-
-    for qna_id in request.qna_ids:
-
-        record = get_qna_sl(
-            "qna_sl_logs",
-            qna_id
-        )
-
-        if not record:
-            results.append({
-                "qna_id": qna_id,
-                "status": "not_found"
-            })
-            continue
-
-        final_answer = record["corrected_answer"]
-
-        payload = {
-            "question": record["question"],
-            "answer": final_answer,
-            "kb_id": record["kb_id"]
-        }
-
-        # -------------------------------
-        # Step 2: Call ML pipeline (TEMP MOCK)
-        # -------------------------------
-        success = True
-
-        # -------------------------------
-        # Step 3: Update flag
-        # -------------------------------
-        if success:
-            mark_qna_ml_ready(qna_id)
-
-        results.append({
-            "qna_id": qna_id,
-            "ml_status": success
-        })
-
-    return {
-        "results": results
-    }
-
-
-@app.post("/qna_sl_search")
-def qna_sl_search(request: QnaSearchRequest):
-
-    print("INSIDE QNA SL SEARCH")
-
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
-    query_embedding = response.data[0].embedding
-
-    results = query_qna_sl_embeddings(
-        query_embedding,
-        request.kb_id
-    )
-
-    if not results.matches:
-        return {
-            "found": False,
-            "matches": []
-        }
-
-    # NEW CODE STARTS HERE
-    TOP_K = 3
-    matches = results.matches[:TOP_K]
-
-    return {
-        "found": True,
-        "matches": [
-            {
-                "score": m.score,
-                "question": m.metadata.get("question"),
-                "answer": m.metadata.get("answer")
-            }
-            for m in matches
-        ]
-    }
-
-@app.post("/qna_generate")
-def qna_generate(request: QnaGenerateRequest):
-
-    qnas = generate_qnas(request.kb_id)
-
-    return {
-        "status": "success",
-        "message": "5 qnas created",
-        "data": qnas
-    }
-
-
-@app.post("/delete_qna_sl")
-def delete_qna_sl(request: DeleteQnaSLRequest):
-
-    qna_id = request.qna_id
-
-    # -------------------------------
-    # STEP 1: FETCH RECORD
-    # -------------------------------
-    record = get_qna_sl(
-        "generated_qnas",
-        qna_id
-    )
-
-    if not record:
-        raise HTTPException(
-            status_code=404,
-            detail="QnA not found"
-        )
-
-    try:
-
-        # -------------------------------
-        # STEP 2: DELETE EMBEDDINGS
-        # -------------------------------
-        delete_qna_embeddings(
-            "generated",
-            qna_id
-        )
-
-        # -------------------------------
-        # STEP 3: DELETE DB RECORD
-        # -------------------------------
-        delete_qna_record(
-            "generated_qnas",
-            qna_id
-        )
-
-    except Exception as e:
-
-        print(f"⚠️ QnA delete error: {e}")
-
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete QnA"
-        )
-
-    return {
-        "status": "success",
-        "message": "QnA deleted successfully"
-    }
+#     return {
+#         "status": "success",
+#         "message": f"KB deleted for job_id: {job_id}"
+#     }
+
+
+# @app.post("/delete_chart")
+# def delete_chart(request: DeleteChartRequest):
+
+#     job_id = request.job_id
+
+#     # 1. Get chart job
+#     chart_job = get_chart_job(job_id)
+
+#     if not chart_job:
+#         raise HTTPException(status_code=404, detail="Chart not found")
+
+#     if chart_job["status"] == "processing":
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Cannot delete while processing"
+#         )
+
+#     file_id = chart_job["file_id"]
+
+#     if not file_id:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="file_id missing for this chart job"
+#         )    
+
+#     print("🧾 DELETE CHART JOB:", chart_job)
+#     print("📁 FILE_ID:", file_id)
+
+#     try:
+#         # 2. Delete embeddings
+#         print(f"🧹 Deleting embeddings for file_id: {file_id}")
+#         delete_embeddings(file_id)
+#         print(f"✅ Embeddings deleted for file_id: {file_id}")
+
+#         # 3. Delete files from S3
+#         from storage import delete_file
+
+#         delete_file(file_id)
+
+#         print(f"✅ S3 cleanup completed for file_id: {file_id}")
+
+#     except Exception as e:
+#         print(f"⚠️ Delete error: {e}")
+
+#     # 🔥 4. SOFT DELETE (THIS WAS MISSING)
+#     soft_delete_chart_job(job_id)
+
+#     return {
+#         "status": "success",
+#         "message": f"Chart deleted for job_id: {job_id}"
+#     }
+
+
+# @app.post("/qna_sl")
+# def qna_sl(request: QnaSLRequest):
+
+#     # -------------------------------
+#     # STEP 1: CREATE EMBEDDING
+#     # -------------------------------
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
+#     query_embedding = response.data[0].embedding
+
+#     # -------------------------------
+#     # STEP 2: RETRIEVE KB ONLY
+#     # -------------------------------
+#     kb_results = query_kb_embeddings_filtered(
+#         query_embedding,
+#         [request.kb_id],
+#         top_k=5
+#     )
+
+#     # -------------------------------
+#     # STEP 3: BUILD CONTEXT
+#     # -------------------------------
+#     context = ""
+#     for match in kb_results.matches:
+#         context += match.metadata.get("text", "") + "\n"
+
+#     context = context[:3000]
+
+#     # -------------------------------
+#     # STEP 4: GENERATE ANSWER
+#     # -------------------------------
+#     prompt = build_prompt(request.question, context)
+
+#     response = client.chat.completions.create(
+#         model=OPENAI_MODEL,
+#         temperature=0.7,
+#         max_tokens=220,
+#         messages=[
+#             {"role": "system", "content": "You are a careful domain expert."},
+#             {"role": "user", "content": prompt}
+#         ]
+#     )
+
+#     answer = response.choices[0].message.content
+
+#     # -------------------------------
+#     # STEP 5: STORE
+#     # -------------------------------
+#     qna_id = insert_qna_sl(
+#         request.kb_id,
+#         request.question,
+#         answer
+#     )
+
+#     # -------------------------------
+#     # STEP 6: RETURN
+#     # -------------------------------
+#     return {
+#         "qna_id": qna_id,
+#         "answer": answer
+#     }
+
+
+# @app.post("/qna_sl_validation")
+# def qna_sl_validation(request: QnaSLValidationRequest):
+
+#     table_map = {
+#         "sl": "qna_sl_logs",
+#         "generated": "generated_qnas"
+#     }
+
+#     if request.source_type not in table_map:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Invalid source_type"
+#         )
+
+#     table_name = table_map[request.source_type]
+
+#     # -------------------------------
+#     # STEP 1: FETCH ORIGINAL QNA
+#     # -------------------------------
+#     record = get_qna_sl(
+#         table_name,
+#         request.qna_id
+#     )
+
+#     if not record:
+#         raise HTTPException(status_code=404, detail="QnA not found")
+
+#     # -------------------------------
+#     # STEP 2: DECIDE FINAL ANSWER
+#     # -------------------------------
+#     original_answer = (
+#         record.get("llm_answer")
+#         or record.get("answer")
+#     )
+
+#     if request.is_valid:
+
+#         final_answer = original_answer
+
+#     else:
+
+#         if not request.corrected_answer:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail="Corrected answer required when invalid"
+#             )
+
+#         final_answer = request.corrected_answer
+
+#     # -------------------------------
+#     # STEP 3: UPDATE DB
+#     # -------------------------------
+#     update_qna_sl_validation(
+#         table_name=table_name,
+#         qna_id=request.qna_id,
+#         is_valid=request.is_valid,
+#         llm_answer=original_answer,
+#         corrected_answer=request.corrected_answer
+#     )
+
+#     # -------------------------------
+#     # STEP 4: CREATE EMBEDDING
+#     # -------------------------------
+#     text = record['question']
+
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=text
+#     )
+#     embedding = response.data[0].embedding
+
+#     print("KB_ID SAVED:", record["kb_id"])
+#     print("QUESTION SAVED:", record["question"])
+
+#     # -------------------------------
+#     # STEP 5: STORE IN VECTOR DB
+#     # -------------------------------
+#     upsert_embeddings(
+#         file_id=f"{request.source_type}_{request.qna_id}",
+#         chunks=[text],
+#         embeddings=[embedding],
+#         metadata={
+#             "type": "qna_sl",
+#             "kb_id": str(record["kb_id"]).strip(),
+#             "question": record["question"],
+#             "answer": final_answer,
+#             "source_type": request.source_type
+#         }
+#     )
+
+#     # -------------------------------
+#     # STEP 6: RESPONSE
+#     # -------------------------------
+#     return {
+#         "status": "validated and learned"
+#     }
+
+
+# @app.post("/qna_ml_submit")
+# def qna_ml_submit(request: QnaMLRequest):
+
+#     results = []
+
+#     for qna_id in request.qna_ids:
+
+#         record = get_qna_sl(
+#             "qna_sl_logs",
+#             qna_id
+#         )
+
+#         if not record:
+#             results.append({
+#                 "qna_id": qna_id,
+#                 "status": "not_found"
+#             })
+#             continue
+
+#         final_answer = record["corrected_answer"]
+
+#         payload = {
+#             "question": record["question"],
+#             "answer": final_answer,
+#             "kb_id": record["kb_id"]
+#         }
+
+#         # -------------------------------
+#         # Step 2: Call ML pipeline (TEMP MOCK)
+#         # -------------------------------
+#         success = True
+
+#         # -------------------------------
+#         # Step 3: Update flag
+#         # -------------------------------
+#         if success:
+#             mark_qna_ml_ready(qna_id)
+
+#         results.append({
+#             "qna_id": qna_id,
+#             "ml_status": success
+#         })
+
+#     return {
+#         "results": results
+#     }
+
+
+# @app.post("/qna_sl_search")
+# def qna_sl_search(request: QnaSearchRequest):
+
+#     print("INSIDE QNA SL SEARCH")
+
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
+#     query_embedding = response.data[0].embedding
+
+#     results = query_qna_sl_embeddings(
+#         query_embedding,
+#         request.kb_id
+#     )
+
+#     if not results.matches:
+#         return {
+#             "found": False,
+#             "matches": []
+#         }
+
+#     # NEW CODE STARTS HERE
+#     TOP_K = 3
+#     matches = results.matches[:TOP_K]
+
+#     return {
+#         "found": True,
+#         "matches": [
+#             {
+#                 "score": m.score,
+#                 "question": m.metadata.get("question"),
+#                 "answer": m.metadata.get("answer")
+#             }
+#             for m in matches
+#         ]
+#     }
+
+# @app.post("/qna_generate")
+# def qna_generate(request: QnaGenerateRequest):
+
+#     qnas = generate_qnas(request.kb_id)
+
+#     return {
+#         "status": "success",
+#         "message": "5 qnas created",
+#         "data": qnas
+#     }
+
+
+# @app.post("/delete_qna_sl")
+# def delete_qna_sl(request: DeleteQnaSLRequest):
+
+#     qna_id = request.qna_id
+
+#     # -------------------------------
+#     # STEP 1: FETCH RECORD
+#     # -------------------------------
+#     record = get_qna_sl(
+#         "generated_qnas",
+#         qna_id
+#     )
+
+#     if not record:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="QnA not found"
+#         )
+
+#     try:
+
+#         # -------------------------------
+#         # STEP 2: DELETE EMBEDDINGS
+#         # -------------------------------
+#         delete_qna_embeddings(
+#             "generated",
+#             qna_id
+#         )
+
+#         # -------------------------------
+#         # STEP 3: DELETE DB RECORD
+#         # -------------------------------
+#         delete_qna_record(
+#             "generated_qnas",
+#             qna_id
+#         )
+
+#     except Exception as e:
+
+#         print(f"⚠️ QnA delete error: {e}")
+
+#         raise HTTPException(
+#             status_code=500,
+#             detail="Failed to delete QnA"
+#         )
+
+#     return {
+#         "status": "success",
+#         "message": "QnA deleted successfully"
+#     }
 
 
 # -------------------------------------------------
@@ -2562,269 +2562,269 @@ def delete_qna_sl(request: DeleteQnaSLRequest):
 #     return matches[:5]
 
 
-@app.post("/retrieval_test")
-async def retrieval_test(request: RetrievalTestRequest):
-    try:
+# @app.post("/retrieval_test")
+# async def retrieval_test(request: RetrievalTestRequest):
+#     try:
 
-        print("\n========== RETRIEVAL TEST REQUEST ==========")
-        print("QUESTION:", request.question)
+#         print("\n========== RETRIEVAL TEST REQUEST ==========")
+#         print("QUESTION:", request.question)
 
-        print("REQUEST DICT:")
-        print(request.dict())
+#         print("REQUEST DICT:")
+#         print(request.dict())
 
-        print("===========================================")
+#         print("===========================================")
 
 
-        # --------------------------------
-        # EMBEDDING
-        # --------------------------------
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=request.question
-        )
+#         # --------------------------------
+#         # EMBEDDING
+#         # --------------------------------
+#         response = client.embeddings.create(
+#             model="text-embedding-3-small",
+#             input=request.question
+#         )
 
-        query_embedding = response.data[0].embedding
+#         query_embedding = response.data[0].embedding
 
 
-        # --------------------------------
-        # RETRIEVAL PIPELINE
-        # --------------------------------
-        print("\n========== RETRIEVAL PIPELINE ==========")
+#         # --------------------------------
+#         # RETRIEVAL PIPELINE
+#         # --------------------------------
+#         print("\n========== RETRIEVAL PIPELINE ==========")
 
-        # -------------------------------
-        # Chart Retrieval
-        # -------------------------------
-        chart_details = []
-        all_chart_matches = []
+#         # -------------------------------
+#         # Chart Retrieval
+#         # -------------------------------
+#         chart_details = []
+#         all_chart_matches = []
 
-        if request.chart_ids:
+#         if request.chart_ids:
 
-            chart_details = get_chart_details_bulk(request.chart_ids)
+#             chart_details = get_chart_details_bulk(request.chart_ids)
 
-            for chart in chart_details:
+#             for chart in chart_details:
 
-                results = query_chart_embeddings(
-                    query_embedding,
-                    chart["user_id"],
-                    chart["profile_id"],
-                    chart["chart_id"],
-                    top_k=request.top_k
-                )
+#                 results = query_chart_embeddings(
+#                     query_embedding,
+#                     chart["user_id"],
+#                     chart["profile_id"],
+#                     chart["chart_id"],
+#                     top_k=request.top_k
+#                 )
 
-                all_chart_matches.extend(results.matches)
+#                 all_chart_matches.extend(results.matches)
 
-        semantic_results = all_chart_matches
+#         semantic_results = all_chart_matches
 
-        # -------------------------------
-        # Knowledge Base Retrieval
-        # -------------------------------
-        exact_match = None
-        kb_results = None
+#         # -------------------------------
+#         # Knowledge Base Retrieval
+#         # -------------------------------
+#         exact_match = None
+#         kb_results = None
 
-        if request.kb_id:
+#         if request.kb_id:
 
-            exact_match = find_exact_kb_match(
-                request.kb_id[0],
-                request.question
-            )
+#             exact_match = find_exact_kb_match(
+#                 request.kb_id[0],
+#                 request.question
+#             )
 
-            if exact_match:
+#             if exact_match:
 
-                print("USING EXACT MATCH")
+#                 print("USING EXACT MATCH")
 
-                kb_results = [exact_match]
+#                 kb_results = [exact_match]
 
-            else:
+#             else:
 
-                print("USING VECTOR SEARCH")
+#                 print("USING VECTOR SEARCH")
 
-                kb_results = query_kb_embeddings_filtered(
-                    query_embedding,
-                    request.kb_id,
-                    top_k=request.top_k
-                )
+#                 kb_results = query_kb_embeddings_filtered(
+#                     query_embedding,
+#                     request.kb_id,
+#                     top_k=request.top_k
+#                 )
 
-        # --------------------------------
-        # NOISE FILTER
-        # --------------------------------
+#         # --------------------------------
+#         # NOISE FILTER
+#         # --------------------------------
 
-        def is_noise_chunk(text):
+#         def is_noise_chunk(text):
 
-            text_lower = text.lower()
+#             text_lower = text.lower()
 
-            if "appendix" in text_lower:
-                return True
+#             if "appendix" in text_lower:
+#                 return True
 
-            if "contents" in text_lower:
-                return True
+#             if "contents" in text_lower:
+#                 return True
 
-            numbers = re.findall(r"\d+", text)
+#             numbers = re.findall(r"\d+", text)
 
-            if len(numbers) > 20:
-                return True
+#             if len(numbers) > 20:
+#                 return True
 
-            return False
-
-        filtered_matches = []
-
-        if semantic_results:
-
-            filtered_matches = [
-                match
-                for match in semantic_results
-                if not is_noise_chunk(
-                    match.metadata.get("text", "")
-                )
-            ]
-
-        # --------------------------------
-        # DEBUG
-        # --------------------------------
-        if semantic_results:
-
-            print("\n===== ORIGINAL PINECONE =====")
-
-            for idx, match in enumerate(
-                semantic_results[:20]
-            ):
-
-                print(
-                    idx + 1,
-                    round(match.score, 4),
-                    match.metadata.get(
-                        "text",
-                        ""
-                    )[:150]
-                )
+#             return False
+
+#         filtered_matches = []
+
+#         if semantic_results:
+
+#             filtered_matches = [
+#                 match
+#                 for match in semantic_results
+#                 if not is_noise_chunk(
+#                     match.metadata.get("text", "")
+#                 )
+#             ]
+
+#         # --------------------------------
+#         # DEBUG
+#         # --------------------------------
+#         if semantic_results:
+
+#             print("\n===== ORIGINAL PINECONE =====")
+
+#             for idx, match in enumerate(
+#                 semantic_results[:20]
+#             ):
+
+#                 print(
+#                     idx + 1,
+#                     round(match.score, 4),
+#                     match.metadata.get(
+#                         "text",
+#                         ""
+#                     )[:150]
+#                 )
 
-            print("\n===== AFTER NOISE FILTER =====")
+#             print("\n===== AFTER NOISE FILTER =====")
 
-            for idx, match in enumerate(
-                filtered_matches[:20]
-            ):
+#             for idx, match in enumerate(
+#                 filtered_matches[:20]
+#             ):
 
-                print(
-                    idx + 1,
-                    round(match.score, 4),
-                    match.metadata.get(
-                        "text",
-                        ""
-                    )[:150]
-                )
+#                 print(
+#                     idx + 1,
+#                     round(match.score, 4),
+#                     match.metadata.get(
+#                         "text",
+#                         ""
+#                     )[:150]
+#                 )
 
-        # --------------------------------
-        # SIMPLE RERANKING
-        # --------------------------------
+#         # --------------------------------
+#         # SIMPLE RERANKING
+#         # --------------------------------
 
-        query_words = set(
-            re.findall(
-                r"[a-zA-Z]+",
-                request.question.lower()
-            )
-        )
+#         query_words = set(
+#             re.findall(
+#                 r"[a-zA-Z]+",
+#                 request.question.lower()
+#             )
+#         )
 
-        reranked = []
+#         reranked = []
 
-        for match in filtered_matches:
+#         for match in filtered_matches:
 
-            text = match.metadata.get(
-                "text",
-                ""
-            ).lower()
+#             text = match.metadata.get(
+#                 "text",
+#                 ""
+#             ).lower()
 
-            overlap_score = sum(
-                1
-                for word in query_words
-                if len(word) > 3 and word in text
-            )
+#             overlap_score = sum(
+#                 1
+#                 for word in query_words
+#                 if len(word) > 3 and word in text
+#             )
 
-            final_score = match.score
+#             final_score = match.score
 
-            final_score += overlap_score * 0.05
+#             final_score += overlap_score * 0.05
 
-            reranked.append(
-                (final_score, match)
-            )
+#             reranked.append(
+#                 (final_score, match)
+#             )
 
-        reranked.sort(
-            key=lambda x: x[0],
-            reverse=True
-        )
+#         reranked.sort(
+#             key=lambda x: x[0],
+#             reverse=True
+#         )
 
-        filtered_matches = [
-            item[1]
-            for item in reranked
-        ]
+#         filtered_matches = [
+#             item[1]
+#             for item in reranked
+#         ]
 
-        chart_matches = filtered_matches
+#         chart_matches = filtered_matches
 
-        context = build_context(
-            chart_matches,
-            kb_results
-        )
+#         context = build_context(
+#             chart_matches,
+#             kb_results
+#         )
 
-        print("\n========== CONTEXT DEBUG ==========")
-        print("Context length:", len(context))
-        print("Retrieved chart chunks:", len(filtered_matches))
-        print(
-            "KB chunks:",
-            len(kb_results)
-            if isinstance(kb_results, list)
-            else len(kb_results.matches)
-            if kb_results
-            else 0
-        )
+#         print("\n========== CONTEXT DEBUG ==========")
+#         print("Context length:", len(context))
+#         print("Retrieved chart chunks:", len(filtered_matches))
+#         print(
+#             "KB chunks:",
+#             len(kb_results)
+#             if isinstance(kb_results, list)
+#             else len(kb_results.matches)
+#             if kb_results
+#             else 0
+#         )
 
-        # --------------------------------
-        # RESPONSE
-        # --------------------------------
+#         # --------------------------------
+#         # RESPONSE
+#         # --------------------------------
 
-        return {
+#         return {
 
-            "status": "success",
+#             "status": "success",
 
-            "question": request.question,
+#             "question": request.question,
 
-            "chart_ids": request.chart_ids,
+#             "chart_ids": request.chart_ids,
 
-            "kb_id": request.kb_id,
+#             "kb_id": request.kb_id,
 
-            "top_k": request.top_k,
+#             "top_k": request.top_k,
 
-            "embedding_dimension": len(query_embedding),
+#             "embedding_dimension": len(query_embedding),
 
-            "filtered_chart_match_count": len(filtered_matches),
+#             "filtered_chart_match_count": len(filtered_matches),
 
-            "exact_match_used": isinstance(kb_results, list),
+#             "exact_match_used": isinstance(kb_results, list),
 
-            "kb_match_count": (
-                len(kb_results)
-                if isinstance(kb_results, list)
-                else len(kb_results.matches)
-                if kb_results
-                else 0
-            ),
+#             "kb_match_count": (
+#                 len(kb_results)
+#                 if isinstance(kb_results, list)
+#                 else len(kb_results.matches)
+#                 if kb_results
+#                 else 0
+#             ),
 
-            "semantic_matches": [
+#             "semantic_matches": [
 
-                {
-                    "rank": idx + 1,
-                    "score": round(reranked[idx][0], 4),
-                    "file_id": match.metadata.get("file_id"),
-                    "text": match.metadata.get("text", "")[:500]
-                }
+#                 {
+#                     "rank": idx + 1,
+#                     "score": round(reranked[idx][0], 4),
+#                     "file_id": match.metadata.get("file_id"),
+#                     "text": match.metadata.get("text", "")[:500]
+#                 }
 
-                for idx, match in enumerate(
-                    filtered_matches[:10]
-                )
-            ],
+#                 for idx, match in enumerate(
+#                     filtered_matches[:10]
+#                 )
+#             ],
 
-            "context": context
-        }
+#             "context": context
+#         }
         
-    except Exception as e:
+#     except Exception as e:
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+#         raise HTTPException(
+#             status_code=500,
+#             detail=str(e)
+#         )
