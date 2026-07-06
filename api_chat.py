@@ -2225,215 +2225,215 @@ def welcome_message(request: WelcomeRequest):
 #     }
 
 
-@app.post("/qna_sl")
-def qna_sl(request: QnaSLRequest):
+# @app.post("/qna_sl")
+# def qna_sl(request: QnaSLRequest):
 
-    # -------------------------------
-    # STEP 1: CREATE EMBEDDING
-    # -------------------------------
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
-    )
-    query_embedding = response.data[0].embedding
+#     # -------------------------------
+#     # STEP 1: CREATE EMBEDDING
+#     # -------------------------------
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=request.question
+#     )
+#     query_embedding = response.data[0].embedding
 
-    # -------------------------------
-    # STEP 2: RETRIEVE KB ONLY
-    # -------------------------------
-    kb_results = query_kb_embeddings_filtered(
-        query_embedding,
-        [request.kb_id],
-        top_k=5
-    )
+#     # -------------------------------
+#     # STEP 2: RETRIEVE KB ONLY
+#     # -------------------------------
+#     kb_results = query_kb_embeddings_filtered(
+#         query_embedding,
+#         [request.kb_id],
+#         top_k=5
+#     )
 
-    # -------------------------------
-    # STEP 3: BUILD CONTEXT
-    # -------------------------------
-    context = ""
-    for match in kb_results.matches:
-        context += match.metadata.get("text", "") + "\n"
+#     # -------------------------------
+#     # STEP 3: BUILD CONTEXT
+#     # -------------------------------
+#     context = ""
+#     for match in kb_results.matches:
+#         context += match.metadata.get("text", "") + "\n"
 
-    context = context[:3000]
+#     context = context[:3000]
 
-    # -------------------------------
-    # STEP 4: GENERATE ANSWER
-    # -------------------------------
-    prompt = build_prompt(request.question, context)
+#     # -------------------------------
+#     # STEP 4: GENERATE ANSWER
+#     # -------------------------------
+#     prompt = build_prompt(request.question, context)
 
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        temperature=0.7,
-        max_tokens=220,
-        messages=[
-            {"role": "system", "content": "You are a careful domain expert."},
-            {"role": "user", "content": prompt}
-        ]
-    )
+#     response = client.chat.completions.create(
+#         model=OPENAI_MODEL,
+#         temperature=0.7,
+#         max_tokens=220,
+#         messages=[
+#             {"role": "system", "content": "You are a careful domain expert."},
+#             {"role": "user", "content": prompt}
+#         ]
+#     )
 
-    answer = response.choices[0].message.content
+#     answer = response.choices[0].message.content
 
-    # -------------------------------
-    # STEP 5: STORE
-    # -------------------------------
-    qna_id = insert_qna_sl(
-        request.kb_id,
-        request.question,
-        answer
-    )
+#     # -------------------------------
+#     # STEP 5: STORE
+#     # -------------------------------
+#     qna_id = insert_qna_sl(
+#         request.kb_id,
+#         request.question,
+#         answer
+#     )
 
-    # -------------------------------
-    # STEP 6: RETURN
-    # -------------------------------
-    return {
-        "qna_id": qna_id,
-        "answer": answer
-    }
-
-
-@app.post("/qna_sl_validation")
-def qna_sl_validation(request: QnaSLValidationRequest):
-
-    table_map = {
-        "sl": "qna_sl_logs",
-        "generated": "generated_qnas"
-    }
-
-    if request.source_type not in table_map:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid source_type"
-        )
-
-    table_name = table_map[request.source_type]
-
-    # -------------------------------
-    # STEP 1: FETCH ORIGINAL QNA
-    # -------------------------------
-    record = get_qna_sl(
-        table_name,
-        request.qna_id
-    )
-
-    if not record:
-        raise HTTPException(status_code=404, detail="QnA not found")
-
-    # -------------------------------
-    # STEP 2: DECIDE FINAL ANSWER
-    # -------------------------------
-    original_answer = (
-        record.get("llm_answer")
-        or record.get("answer")
-    )
-
-    if request.is_valid:
-
-        final_answer = original_answer
-
-    else:
-
-        if not request.corrected_answer:
-            raise HTTPException(
-                status_code=400,
-                detail="Corrected answer required when invalid"
-            )
-
-        final_answer = request.corrected_answer
-
-    # -------------------------------
-    # STEP 3: UPDATE DB
-    # -------------------------------
-    update_qna_sl_validation(
-        table_name=table_name,
-        qna_id=request.qna_id,
-        is_valid=request.is_valid,
-        llm_answer=original_answer,
-        corrected_answer=request.corrected_answer
-    )
-
-    # -------------------------------
-    # STEP 4: CREATE EMBEDDING
-    # -------------------------------
-    text = record['question']
-
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    embedding = response.data[0].embedding
-
-    print("KB_ID SAVED:", record["kb_id"])
-    print("QUESTION SAVED:", record["question"])
-
-    # -------------------------------
-    # STEP 5: STORE IN VECTOR DB
-    # -------------------------------
-    upsert_embeddings(
-        file_id=f"{request.source_type}_{request.qna_id}",
-        chunks=[text],
-        embeddings=[embedding],
-        metadata={
-            "type": "qna_sl",
-            "kb_id": str(record["kb_id"]).strip(),
-            "question": record["question"],
-            "answer": final_answer,
-            "source_type": request.source_type
-        }
-    )
-
-    # -------------------------------
-    # STEP 6: RESPONSE
-    # -------------------------------
-    return {
-        "status": "validated and learned"
-    }
+#     # -------------------------------
+#     # STEP 6: RETURN
+#     # -------------------------------
+#     return {
+#         "qna_id": qna_id,
+#         "answer": answer
+#     }
 
 
-@app.post("/qna_ml_submit")
-def qna_ml_submit(request: QnaMLRequest):
+# @app.post("/qna_sl_validation")
+# def qna_sl_validation(request: QnaSLValidationRequest):
 
-    results = []
+#     table_map = {
+#         "sl": "qna_sl_logs",
+#         "generated": "generated_qnas"
+#     }
 
-    for qna_id in request.qna_ids:
+#     if request.source_type not in table_map:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Invalid source_type"
+#         )
 
-        record = get_qna_sl(
-            "qna_sl_logs",
-            qna_id
-        )
+#     table_name = table_map[request.source_type]
 
-        if not record:
-            results.append({
-                "qna_id": qna_id,
-                "status": "not_found"
-            })
-            continue
+#     # -------------------------------
+#     # STEP 1: FETCH ORIGINAL QNA
+#     # -------------------------------
+#     record = get_qna_sl(
+#         table_name,
+#         request.qna_id
+#     )
 
-        final_answer = record["corrected_answer"]
+#     if not record:
+#         raise HTTPException(status_code=404, detail="QnA not found")
 
-        payload = {
-            "question": record["question"],
-            "answer": final_answer,
-            "kb_id": record["kb_id"]
-        }
+#     # -------------------------------
+#     # STEP 2: DECIDE FINAL ANSWER
+#     # -------------------------------
+#     original_answer = (
+#         record.get("llm_answer")
+#         or record.get("answer")
+#     )
 
-        # -------------------------------
-        # Step 2: Call ML pipeline (TEMP MOCK)
-        # -------------------------------
-        success = True
+#     if request.is_valid:
 
-        # -------------------------------
-        # Step 3: Update flag
-        # -------------------------------
-        if success:
-            mark_qna_ml_ready(qna_id)
+#         final_answer = original_answer
 
-        results.append({
-            "qna_id": qna_id,
-            "ml_status": success
-        })
+#     else:
 
-    return {
-        "results": results
-    }
+#         if not request.corrected_answer:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail="Corrected answer required when invalid"
+#             )
+
+#         final_answer = request.corrected_answer
+
+#     # -------------------------------
+#     # STEP 3: UPDATE DB
+#     # -------------------------------
+#     update_qna_sl_validation(
+#         table_name=table_name,
+#         qna_id=request.qna_id,
+#         is_valid=request.is_valid,
+#         llm_answer=original_answer,
+#         corrected_answer=request.corrected_answer
+#     )
+
+#     # -------------------------------
+#     # STEP 4: CREATE EMBEDDING
+#     # -------------------------------
+#     text = record['question']
+
+#     response = client.embeddings.create(
+#         model="text-embedding-3-small",
+#         input=text
+#     )
+#     embedding = response.data[0].embedding
+
+#     print("KB_ID SAVED:", record["kb_id"])
+#     print("QUESTION SAVED:", record["question"])
+
+#     # -------------------------------
+#     # STEP 5: STORE IN VECTOR DB
+#     # -------------------------------
+#     upsert_embeddings(
+#         file_id=f"{request.source_type}_{request.qna_id}",
+#         chunks=[text],
+#         embeddings=[embedding],
+#         metadata={
+#             "type": "qna_sl",
+#             "kb_id": str(record["kb_id"]).strip(),
+#             "question": record["question"],
+#             "answer": final_answer,
+#             "source_type": request.source_type
+#         }
+#     )
+
+#     # -------------------------------
+#     # STEP 6: RESPONSE
+#     # -------------------------------
+#     return {
+#         "status": "validated and learned"
+#     }
+
+
+# @app.post("/qna_ml_submit")
+# def qna_ml_submit(request: QnaMLRequest):
+
+#     results = []
+
+#     for qna_id in request.qna_ids:
+
+#         record = get_qna_sl(
+#             "qna_sl_logs",
+#             qna_id
+#         )
+
+#         if not record:
+#             results.append({
+#                 "qna_id": qna_id,
+#                 "status": "not_found"
+#             })
+#             continue
+
+#         final_answer = record["corrected_answer"]
+
+#         payload = {
+#             "question": record["question"],
+#             "answer": final_answer,
+#             "kb_id": record["kb_id"]
+#         }
+
+#         # -------------------------------
+#         # Step 2: Call ML pipeline (TEMP MOCK)
+#         # -------------------------------
+#         success = True
+
+#         # -------------------------------
+#         # Step 3: Update flag
+#         # -------------------------------
+#         if success:
+#             mark_qna_ml_ready(qna_id)
+
+#         results.append({
+#             "qna_id": qna_id,
+#             "ml_status": success
+#         })
+
+#     return {
+#         "results": results
+#     }
 
 
 @app.post("/qna_sl_search")
@@ -2474,68 +2474,68 @@ def qna_sl_search(request: QnaSearchRequest):
         ]
     }
 
-@app.post("/qna_generate")
-def qna_generate(request: QnaGenerateRequest):
+# @app.post("/qna_generate")
+# def qna_generate(request: QnaGenerateRequest):
 
-    qnas = generate_qnas(request.kb_id)
+#     qnas = generate_qnas(request.kb_id)
 
-    return {
-        "status": "success",
-        "message": "5 qnas created",
-        "data": qnas
-    }
+#     return {
+#         "status": "success",
+#         "message": "5 qnas created",
+#         "data": qnas
+#     }
 
 
-@app.post("/delete_qna_sl")
-def delete_qna_sl(request: DeleteQnaSLRequest):
+# @app.post("/delete_qna_sl")
+# def delete_qna_sl(request: DeleteQnaSLRequest):
 
-    qna_id = request.qna_id
+#     qna_id = request.qna_id
 
-    # -------------------------------
-    # STEP 1: FETCH RECORD
-    # -------------------------------
-    record = get_qna_sl(
-        "generated_qnas",
-        qna_id
-    )
+#     # -------------------------------
+#     # STEP 1: FETCH RECORD
+#     # -------------------------------
+#     record = get_qna_sl(
+#         "generated_qnas",
+#         qna_id
+#     )
 
-    if not record:
-        raise HTTPException(
-            status_code=404,
-            detail="QnA not found"
-        )
+#     if not record:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="QnA not found"
+#         )
 
-    try:
+#     try:
 
-        # -------------------------------
-        # STEP 2: DELETE EMBEDDINGS
-        # -------------------------------
-        delete_qna_embeddings(
-            "generated",
-            qna_id
-        )
+#         # -------------------------------
+#         # STEP 2: DELETE EMBEDDINGS
+#         # -------------------------------
+#         delete_qna_embeddings(
+#             "generated",
+#             qna_id
+#         )
 
-        # -------------------------------
-        # STEP 3: DELETE DB RECORD
-        # -------------------------------
-        delete_qna_record(
-            "generated_qnas",
-            qna_id
-        )
+#         # -------------------------------
+#         # STEP 3: DELETE DB RECORD
+#         # -------------------------------
+#         delete_qna_record(
+#             "generated_qnas",
+#             qna_id
+#         )
 
-    except Exception as e:
+#     except Exception as e:
 
-        print(f"⚠️ QnA delete error: {e}")
+#         print(f"⚠️ QnA delete error: {e}")
 
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete QnA"
-        )
+#         raise HTTPException(
+#             status_code=500,
+#             detail="Failed to delete QnA"
+#         )
 
-    return {
-        "status": "success",
-        "message": "QnA deleted successfully"
-    }
+#     return {
+#         "status": "success",
+#         "message": "QnA deleted successfully"
+#     }
 
 
 # -------------------------------------------------
