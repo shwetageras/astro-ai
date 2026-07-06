@@ -846,99 +846,99 @@ def query_docs(request: QueryRequest):
     }
 
 # Create NEW API → /upload_chart
-@app.post("/upload_chart")
-async def upload_chart(
-    background_tasks: BackgroundTasks,
-    isCharttype: str = Form(...),
-    name: str = Form(...),
-    user_id: int = Form(...),
-    profile_id: int = Form(...),
-    chart_id: int = Form(...),
-    content: str = Form(None),
-    file: UploadFile = File(None)
-):
-    print("========== UPLOAD CHART HIT ==========")
+# @app.post("/upload_chart")
+# async def upload_chart(
+#     background_tasks: BackgroundTasks,
+#     isCharttype: str = Form(...),
+#     name: str = Form(...),
+#     user_id: int = Form(...),
+#     profile_id: int = Form(...),
+#     chart_id: int = Form(...),
+#     content: str = Form(None),
+#     file: UploadFile = File(None)
+# ):
+#     print("========== UPLOAD CHART HIT ==========")
 
 
-    timestamp = int(time.time())
+#     timestamp = int(time.time())
 
-    safe_name = make_safe_filename("chart")
-    file_id = f"{timestamp}_{uuid.uuid4().hex}_{safe_name}"
+#     safe_name = make_safe_filename("chart")
+#     file_id = f"{timestamp}_{uuid.uuid4().hex}_{safe_name}"
 
-    job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
+#     job_id = f"job_{timestamp}_{uuid.uuid4().hex}"
 
-    insert_chart_job(
-        job_id,
-        file_id,
-        chart_id,
-        user_id,
-        profile_id,
-        name,
-        "processing",
-        timestamp
-    )
+#     insert_chart_job(
+#         job_id,
+#         file_id,
+#         chart_id,
+#         user_id,
+#         profile_id,
+#         name,
+#         "processing",
+#         timestamp
+#     )
 
-    # 🔥 CASE 1: TEXT INPUT
-    if isCharttype == "article":
+#     # 🔥 CASE 1: TEXT INPUT
+#     if isCharttype == "article":
 
-        if not content:
-            raise HTTPException(status_code=400, detail="Content required for text chart")
+#         if not content:
+#             raise HTTPException(status_code=400, detail="Content required for text chart")
 
-        # Start background processing
-        background_tasks.add_task(
-            process_chart_text,
-            content,
-            file_id,
-            job_id,
-            chart_id,   
-            user_id,
-            profile_id,
-            timestamp
-        )
+#         # Start background processing
+#         background_tasks.add_task(
+#             process_chart_text,
+#             content,
+#             file_id,
+#             job_id,
+#             chart_id,   
+#             user_id,
+#             profile_id,
+#             timestamp
+#         )
 
-    # 🔥 CASE 2: FILE INPUT
-    elif isCharttype == "file":
+#     # 🔥 CASE 2: FILE INPUT
+#     elif isCharttype == "file":
 
-        print("FILE UPLOAD MODE")
+#         print("FILE UPLOAD MODE")
 
-        if not file:
-            raise HTTPException(status_code=400, detail="File required for chart upload")
+#         if not file:
+#             raise HTTPException(status_code=400, detail="File required for chart upload")
 
-        print("FILE NAME:", file.filename)
+#         print("FILE NAME:", file.filename)
 
-        file_bytes = await file.read()
+#         file_bytes = await file.read()
 
-        print(
-            "FILE SIZE MB:",
-            round(len(file_bytes) / (1024 * 1024), 2)
-        )
+#         print(
+#             "FILE SIZE MB:",
+#             round(len(file_bytes) / (1024 * 1024), 2)
+#         )
 
-        # Save to S3
-        save_file(file_bytes, file_id)
+#         # Save to S3
+#         save_file(file_bytes, file_id)
 
-        print("ADDING BACKGROUND TASK", flush=True)
+#         print("ADDING BACKGROUND TASK", flush=True)
 
-        background_tasks.add_task(
-            process_chart,
-            file_bytes,
-            file_id,
-            file.filename,
-            job_id,
-            chart_id,
-            user_id,
-            profile_id,
-            timestamp
-        )
+#         background_tasks.add_task(
+#             process_chart,
+#             file_bytes,
+#             file_id,
+#             file.filename,
+#             job_id,
+#             chart_id,
+#             user_id,
+#             profile_id,
+#             timestamp
+#         )
 
-        print("BACKGROUND TASK ADDED", flush=True)
+#         print("BACKGROUND TASK ADDED", flush=True)
 
-    else:
-        raise HTTPException(status_code=400, detail="Invalid isCharttype")
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid isCharttype")
 
-    return {
-        "job_id": job_id,
-        "status": "processing"
-    }
+#     return {
+#         "job_id": job_id,
+#         "status": "processing"
+#     }
 
 
 @app.post("/ask_question")
@@ -2127,102 +2127,102 @@ def welcome_message(request: WelcomeRequest):
     }
 
 
-@app.post("/delete_kb")
-def delete_kb(request: DeleteKBRequest):
+# @app.post("/delete_kb")
+# def delete_kb(request: DeleteKBRequest):
 
-    job_id = request.job_id
+#     job_id = request.job_id
 
-    # 1. Get job
-    job = get_job(job_id)
+#     # 1. Get job
+#     job = get_job(job_id)
 
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+#     if not job:
+#         raise HTTPException(status_code=404, detail="Job not found")
 
-    if job["status"] == "processing":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete while processing is in progress"
-        )
+#     if job["status"] == "processing":
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Cannot delete while processing is in progress"
+#         )
 
-    file_id = job["file_id"]
+#     file_id = job["file_id"]
 
-    # DEBUG (IMPORTANT)
-    print("🧾 DELETE JOB:", job)
-    print("📁 FILE_ID:", file_id)
+#     # DEBUG (IMPORTANT)
+#     print("🧾 DELETE JOB:", job)
+#     print("📁 FILE_ID:", file_id)
 
-    try:
-        # 2. Delete embeddings (Pinecone)
-        print(f"🧹 Deleting embeddings for file_id: {file_id}")
-        delete_embeddings(file_id)
-        print(f"✅ Embeddings deleted for file_id: {file_id}")
+#     try:
+#         # 2. Delete embeddings (Pinecone)
+#         print(f"🧹 Deleting embeddings for file_id: {file_id}")
+#         delete_embeddings(file_id)
+#         print(f"✅ Embeddings deleted for file_id: {file_id}")
 
-        # 3. Delete file from S3
-        from storage import delete_file
-        delete_file(file_id)
+#         # 3. Delete file from S3
+#         from storage import delete_file
+#         delete_file(file_id)
 
-    except Exception as e:
-        print(f"⚠️ Delete error (continuing): {e}")
+#     except Exception as e:
+#         print(f"⚠️ Delete error (continuing): {e}")
 
-    # 🔥 ALWAYS update DB (no matter what)
-    update_job(job_id, "deleted", int(time.time()))
+#     # 🔥 ALWAYS update DB (no matter what)
+#     update_job(job_id, "deleted", int(time.time()))
 
-    return {
-        "status": "success",
-        "message": f"KB deleted for job_id: {job_id}"
-    }
+#     return {
+#         "status": "success",
+#         "message": f"KB deleted for job_id: {job_id}"
+#     }
 
 
-@app.post("/delete_chart")
-def delete_chart(request: DeleteChartRequest):
+# @app.post("/delete_chart")
+# def delete_chart(request: DeleteChartRequest):
 
-    job_id = request.job_id
+#     job_id = request.job_id
 
-    # 1. Get chart job
-    chart_job = get_chart_job(job_id)
+#     # 1. Get chart job
+#     chart_job = get_chart_job(job_id)
 
-    if not chart_job:
-        raise HTTPException(status_code=404, detail="Chart not found")
+#     if not chart_job:
+#         raise HTTPException(status_code=404, detail="Chart not found")
 
-    if chart_job["status"] == "processing":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete while processing"
-        )
+#     if chart_job["status"] == "processing":
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Cannot delete while processing"
+#         )
 
-    file_id = chart_job["file_id"]
+#     file_id = chart_job["file_id"]
 
-    if not file_id:
-        raise HTTPException(
-            status_code=400,
-            detail="file_id missing for this chart job"
-        )    
+#     if not file_id:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="file_id missing for this chart job"
+#         )    
 
-    print("🧾 DELETE CHART JOB:", chart_job)
-    print("📁 FILE_ID:", file_id)
+#     print("🧾 DELETE CHART JOB:", chart_job)
+#     print("📁 FILE_ID:", file_id)
 
-    try:
-        # 2. Delete embeddings
-        print(f"🧹 Deleting embeddings for file_id: {file_id}")
-        delete_embeddings(file_id)
-        print(f"✅ Embeddings deleted for file_id: {file_id}")
+#     try:
+#         # 2. Delete embeddings
+#         print(f"🧹 Deleting embeddings for file_id: {file_id}")
+#         delete_embeddings(file_id)
+#         print(f"✅ Embeddings deleted for file_id: {file_id}")
 
-        # 3. Delete files from S3
-        from storage import delete_file
+#         # 3. Delete files from S3
+#         from storage import delete_file
 
-        delete_file(file_id)
+#         delete_file(file_id)
 
-        print(f"✅ S3 cleanup completed for file_id: {file_id}")
+#         print(f"✅ S3 cleanup completed for file_id: {file_id}")
 
-    except Exception as e:
-        print(f"⚠️ Delete error: {e}")
+#     except Exception as e:
+#         print(f"⚠️ Delete error: {e}")
 
-    # 🔥 4. SOFT DELETE (THIS WAS MISSING)
-    soft_delete_chart_job(job_id)
+#     # 🔥 4. SOFT DELETE (THIS WAS MISSING)
+#     soft_delete_chart_job(job_id)
 
-    return {
-        "status": "success",
-        "message": f"Chart deleted for job_id: {job_id}"
-    }
+#     return {
+#         "status": "success",
+#         "message": f"Chart deleted for job_id: {job_id}"
+#     }
 
 
 @app.post("/qna_sl")
