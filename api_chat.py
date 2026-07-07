@@ -2562,269 +2562,269 @@ def qna_sl_search(request: QnaSearchRequest):
 #     return matches[:5]
 
 
-@app.post("/retrieval_test")
-async def retrieval_test(request: RetrievalTestRequest):
-    try:
+# @app.post("/retrieval_test")
+# async def retrieval_test(request: RetrievalTestRequest):
+#     try:
 
-        print("\n========== RETRIEVAL TEST REQUEST ==========")
-        print("QUESTION:", request.question)
+#         print("\n========== RETRIEVAL TEST REQUEST ==========")
+#         print("QUESTION:", request.question)
 
-        print("REQUEST DICT:")
-        print(request.dict())
+#         print("REQUEST DICT:")
+#         print(request.dict())
 
-        print("===========================================")
+#         print("===========================================")
 
 
-        # --------------------------------
-        # EMBEDDING
-        # --------------------------------
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=request.question
-        )
+#         # --------------------------------
+#         # EMBEDDING
+#         # --------------------------------
+#         response = client.embeddings.create(
+#             model="text-embedding-3-small",
+#             input=request.question
+#         )
 
-        query_embedding = response.data[0].embedding
+#         query_embedding = response.data[0].embedding
 
 
-        # --------------------------------
-        # RETRIEVAL PIPELINE
-        # --------------------------------
-        print("\n========== RETRIEVAL PIPELINE ==========")
+#         # --------------------------------
+#         # RETRIEVAL PIPELINE
+#         # --------------------------------
+#         print("\n========== RETRIEVAL PIPELINE ==========")
 
-        # -------------------------------
-        # Chart Retrieval
-        # -------------------------------
-        chart_details = []
-        all_chart_matches = []
+#         # -------------------------------
+#         # Chart Retrieval
+#         # -------------------------------
+#         chart_details = []
+#         all_chart_matches = []
 
-        if request.chart_ids:
+#         if request.chart_ids:
 
-            chart_details = get_chart_details_bulk(request.chart_ids)
+#             chart_details = get_chart_details_bulk(request.chart_ids)
 
-            for chart in chart_details:
+#             for chart in chart_details:
 
-                results = query_chart_embeddings(
-                    query_embedding,
-                    chart["user_id"],
-                    chart["profile_id"],
-                    chart["chart_id"],
-                    top_k=request.top_k
-                )
+#                 results = query_chart_embeddings(
+#                     query_embedding,
+#                     chart["user_id"],
+#                     chart["profile_id"],
+#                     chart["chart_id"],
+#                     top_k=request.top_k
+#                 )
 
-                all_chart_matches.extend(results.matches)
+#                 all_chart_matches.extend(results.matches)
 
-        semantic_results = all_chart_matches
+#         semantic_results = all_chart_matches
 
-        # -------------------------------
-        # Knowledge Base Retrieval
-        # -------------------------------
-        exact_match = None
-        kb_results = None
+#         # -------------------------------
+#         # Knowledge Base Retrieval
+#         # -------------------------------
+#         exact_match = None
+#         kb_results = None
 
-        if request.kb_id:
+#         if request.kb_id:
 
-            exact_match = find_exact_kb_match(
-                request.kb_id[0],
-                request.question
-            )
+#             exact_match = find_exact_kb_match(
+#                 request.kb_id[0],
+#                 request.question
+#             )
 
-            if exact_match:
+#             if exact_match:
 
-                print("USING EXACT MATCH")
+#                 print("USING EXACT MATCH")
 
-                kb_results = [exact_match]
+#                 kb_results = [exact_match]
 
-            else:
+#             else:
 
-                print("USING VECTOR SEARCH")
+#                 print("USING VECTOR SEARCH")
 
-                kb_results = query_kb_embeddings_filtered(
-                    query_embedding,
-                    request.kb_id,
-                    top_k=request.top_k
-                )
+#                 kb_results = query_kb_embeddings_filtered(
+#                     query_embedding,
+#                     request.kb_id,
+#                     top_k=request.top_k
+#                 )
 
-        # --------------------------------
-        # NOISE FILTER
-        # --------------------------------
+#         # --------------------------------
+#         # NOISE FILTER
+#         # --------------------------------
 
-        def is_noise_chunk(text):
+#         def is_noise_chunk(text):
 
-            text_lower = text.lower()
+#             text_lower = text.lower()
 
-            if "appendix" in text_lower:
-                return True
+#             if "appendix" in text_lower:
+#                 return True
 
-            if "contents" in text_lower:
-                return True
+#             if "contents" in text_lower:
+#                 return True
 
-            numbers = re.findall(r"\d+", text)
+#             numbers = re.findall(r"\d+", text)
 
-            if len(numbers) > 20:
-                return True
+#             if len(numbers) > 20:
+#                 return True
 
-            return False
-
-        filtered_matches = []
-
-        if semantic_results:
-
-            filtered_matches = [
-                match
-                for match in semantic_results
-                if not is_noise_chunk(
-                    match.metadata.get("text", "")
-                )
-            ]
-
-        # --------------------------------
-        # DEBUG
-        # --------------------------------
-        if semantic_results:
-
-            print("\n===== ORIGINAL PINECONE =====")
-
-            for idx, match in enumerate(
-                semantic_results[:20]
-            ):
-
-                print(
-                    idx + 1,
-                    round(match.score, 4),
-                    match.metadata.get(
-                        "text",
-                        ""
-                    )[:150]
-                )
+#             return False
+
+#         filtered_matches = []
+
+#         if semantic_results:
+
+#             filtered_matches = [
+#                 match
+#                 for match in semantic_results
+#                 if not is_noise_chunk(
+#                     match.metadata.get("text", "")
+#                 )
+#             ]
+
+#         # --------------------------------
+#         # DEBUG
+#         # --------------------------------
+#         if semantic_results:
+
+#             print("\n===== ORIGINAL PINECONE =====")
+
+#             for idx, match in enumerate(
+#                 semantic_results[:20]
+#             ):
+
+#                 print(
+#                     idx + 1,
+#                     round(match.score, 4),
+#                     match.metadata.get(
+#                         "text",
+#                         ""
+#                     )[:150]
+#                 )
 
-            print("\n===== AFTER NOISE FILTER =====")
+#             print("\n===== AFTER NOISE FILTER =====")
 
-            for idx, match in enumerate(
-                filtered_matches[:20]
-            ):
+#             for idx, match in enumerate(
+#                 filtered_matches[:20]
+#             ):
 
-                print(
-                    idx + 1,
-                    round(match.score, 4),
-                    match.metadata.get(
-                        "text",
-                        ""
-                    )[:150]
-                )
+#                 print(
+#                     idx + 1,
+#                     round(match.score, 4),
+#                     match.metadata.get(
+#                         "text",
+#                         ""
+#                     )[:150]
+#                 )
 
-        # --------------------------------
-        # SIMPLE RERANKING
-        # --------------------------------
+#         # --------------------------------
+#         # SIMPLE RERANKING
+#         # --------------------------------
 
-        query_words = set(
-            re.findall(
-                r"[a-zA-Z]+",
-                request.question.lower()
-            )
-        )
+#         query_words = set(
+#             re.findall(
+#                 r"[a-zA-Z]+",
+#                 request.question.lower()
+#             )
+#         )
 
-        reranked = []
+#         reranked = []
 
-        for match in filtered_matches:
+#         for match in filtered_matches:
 
-            text = match.metadata.get(
-                "text",
-                ""
-            ).lower()
+#             text = match.metadata.get(
+#                 "text",
+#                 ""
+#             ).lower()
 
-            overlap_score = sum(
-                1
-                for word in query_words
-                if len(word) > 3 and word in text
-            )
+#             overlap_score = sum(
+#                 1
+#                 for word in query_words
+#                 if len(word) > 3 and word in text
+#             )
 
-            final_score = match.score
+#             final_score = match.score
 
-            final_score += overlap_score * 0.05
+#             final_score += overlap_score * 0.05
 
-            reranked.append(
-                (final_score, match)
-            )
+#             reranked.append(
+#                 (final_score, match)
+#             )
 
-        reranked.sort(
-            key=lambda x: x[0],
-            reverse=True
-        )
+#         reranked.sort(
+#             key=lambda x: x[0],
+#             reverse=True
+#         )
 
-        filtered_matches = [
-            item[1]
-            for item in reranked
-        ]
+#         filtered_matches = [
+#             item[1]
+#             for item in reranked
+#         ]
 
-        chart_matches = filtered_matches
+#         chart_matches = filtered_matches
 
-        context = build_context(
-            chart_matches,
-            kb_results
-        )
+#         context = build_context(
+#             chart_matches,
+#             kb_results
+#         )
 
-        print("\n========== CONTEXT DEBUG ==========")
-        print("Context length:", len(context))
-        print("Retrieved chart chunks:", len(filtered_matches))
-        print(
-            "KB chunks:",
-            len(kb_results)
-            if isinstance(kb_results, list)
-            else len(kb_results.matches)
-            if kb_results
-            else 0
-        )
+#         print("\n========== CONTEXT DEBUG ==========")
+#         print("Context length:", len(context))
+#         print("Retrieved chart chunks:", len(filtered_matches))
+#         print(
+#             "KB chunks:",
+#             len(kb_results)
+#             if isinstance(kb_results, list)
+#             else len(kb_results.matches)
+#             if kb_results
+#             else 0
+#         )
 
-        # --------------------------------
-        # RESPONSE
-        # --------------------------------
+#         # --------------------------------
+#         # RESPONSE
+#         # --------------------------------
 
-        return {
+#         return {
 
-            "status": "success",
+#             "status": "success",
 
-            "question": request.question,
+#             "question": request.question,
 
-            "chart_ids": request.chart_ids,
+#             "chart_ids": request.chart_ids,
 
-            "kb_id": request.kb_id,
+#             "kb_id": request.kb_id,
 
-            "top_k": request.top_k,
+#             "top_k": request.top_k,
 
-            "embedding_dimension": len(query_embedding),
+#             "embedding_dimension": len(query_embedding),
 
-            "filtered_chart_match_count": len(filtered_matches),
+#             "filtered_chart_match_count": len(filtered_matches),
 
-            "exact_match_used": isinstance(kb_results, list),
+#             "exact_match_used": isinstance(kb_results, list),
 
-            "kb_match_count": (
-                len(kb_results)
-                if isinstance(kb_results, list)
-                else len(kb_results.matches)
-                if kb_results
-                else 0
-            ),
+#             "kb_match_count": (
+#                 len(kb_results)
+#                 if isinstance(kb_results, list)
+#                 else len(kb_results.matches)
+#                 if kb_results
+#                 else 0
+#             ),
 
-            "semantic_matches": [
+#             "semantic_matches": [
 
-                {
-                    "rank": idx + 1,
-                    "score": round(reranked[idx][0], 4),
-                    "file_id": match.metadata.get("file_id"),
-                    "text": match.metadata.get("text", "")[:500]
-                }
+#                 {
+#                     "rank": idx + 1,
+#                     "score": round(reranked[idx][0], 4),
+#                     "file_id": match.metadata.get("file_id"),
+#                     "text": match.metadata.get("text", "")[:500]
+#                 }
 
-                for idx, match in enumerate(
-                    filtered_matches[:10]
-                )
-            ],
+#                 for idx, match in enumerate(
+#                     filtered_matches[:10]
+#                 )
+#             ],
 
-            "context": context
-        }
+#             "context": context
+#         }
         
-    except Exception as e:
+#     except Exception as e:
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+#         raise HTTPException(
+#             status_code=500,
+#             detail=str(e)
+#         )
