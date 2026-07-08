@@ -1,38 +1,23 @@
 import time
 import uuid
 import os
-import re
 import json
-import requests
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from settings import OPENAI_MODEL, OPENAI_MINI_MODEL, GEMINI_MODEL
 # from google import genai
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb, chunk_json_text
 from notifier import notify_embedding_status
-from db import get_chart_details_bulk, soft_delete_chart_job, get_chart_job
-from db import insert_job, get_job, update_job
+from db import get_job, update_job
 from vector_db import upsert_embeddings
-from vector_db import query_embeddings
 from kb_builder import client
 from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
-from vector_db import query_chart_embeddings
-from db import insert_qna, update_qna_answer
 from fastapi import HTTPException
-from vector_db import delete_embeddings
 from prompts import build_prompt
 from typing import List, Optional
-from vector_db import query_kb_embeddings_filtered
 import google.generativeai as genai
-from db import insert_qna_sl
-from db import update_qna_sl_validation, get_qna_sl
-from db import mark_qna_ml_ready
 from pydantic import BaseModel
-from vector_db import query_qna_sl_embeddings
-from qna_generator import generate_qnas
-from db import delete_qna_record
-from vector_db import delete_qna_embeddings
 from vector_db import get_all_kb_chunks
 
 
