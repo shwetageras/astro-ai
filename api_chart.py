@@ -7,8 +7,7 @@ from settings import OPENAI_MODEL, OPENAI_MINI_MODEL, GEMINI_MODEL
 # from google import genai
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb, chunk_json_text
-from notifier import notify_embedding_status
-from db import get_job, update_job
+from db import get_job
 from vector_db import upsert_embeddings
 from kb_builder import client
 from notifier import notify_chart_status
@@ -29,61 +28,6 @@ app = FastAPI()
 
 def make_safe_filename(name: str):
     return name.replace(" ", "_").replace("/", "_")
-
-# BACKGROUND FUNCTION FOR upload_pdf
-def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
-    
-    temp_file_path = None
-
-    try:
-        # Create temp file
-        temp_file_path = f"temp_{file_id}.{file_name.split('.')[-1]}"
-
-        with open(temp_file_path, "wb") as f:
-            f.write(file_bytes)
-
-        # Run pipeline
-        if "." in file_name:
-            file_ext = file_name.split(".")[-1].lower()
-        else:
-            raise Exception("File has no extension")
-
-        if file_ext == "pdf":
-            text = read_pdf(temp_file_path)
-
-        elif file_ext in ["md", "txt"]:
-            from kb_builder import read_text_file
-            text = read_text_file(temp_file_path)
-
-        else:
-            raise Exception(f"Unsupported file type: {file_ext}")
-        
-        chunks = chunk_text(text)
-        print(f"📊 Total chunks created: {len(chunks)}")
-
-        embeddings = create_embeddings(chunks)
-        print(f"📊 Total embeddings generated: {len(embeddings)}")
-        
-        upsert_embeddings(file_id, chunks, embeddings)    # Upsert = Update + Insert (record already exists → UPDATE it, else INSERT it)
-        
-        kb = build_kb(chunks, embeddings)
-        save_kb(kb, file_id)
-        save_metadata(file_id, file_name, int(time.time()))
-
-        # Update job first
-        update_job(job_id, "completed", int(time.time()))
-
-        # 🔥 THEN notify
-        notify_embedding_status(file_id, job_id, timestamp, file_name)
-
-    except Exception as e:
-        print(f"Error processing job {job_id}: {e}")
-        update_job(job_id, "failed", int(time.time()), str(e))
-
-    finally:
-        # Cleanup temp file
-        if temp_file_path and os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
 
 
 def json_to_semantic_text(data, prefix=""):
@@ -498,30 +442,6 @@ def generate_answer_gemini(question, context):
 
         print("❌ GEMINI ERROR:", str(e))
         raise
-
-
-def process_text(text, file_id, file_name, job_id, timestamp):
-    try:
-        chunks = chunk_text(text)
-        print(f"📊 Total chunks created: {len(chunks)}")
-
-        embeddings = create_embeddings(chunks)
-        print(f"📊 Total embeddings generated: {len(embeddings)}")
-
-        upsert_embeddings(file_id, chunks, embeddings)
-
-        kb = build_kb(chunks, embeddings)
-        save_kb(kb, file_id)
-
-        save_metadata(file_id, file_name, int(time.time()))
-
-        update_job(job_id, "completed", int(time.time()))
-
-        notify_embedding_status(file_id, job_id, timestamp, file_name)
-
-    except Exception as e:
-        print(f"Error processing text job {job_id}: {e}")
-        update_job(job_id, "failed", int(time.time()), str(e))
 
 
 def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, timestamp):
