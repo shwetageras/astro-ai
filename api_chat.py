@@ -25,37 +25,6 @@ genai.configure(
 app = FastAPI()
 
 
-def json_to_semantic_text(data, prefix=""):
-
-    lines = []
-
-    if isinstance(data, dict):
-
-        for k, v in data.items():
-
-            current = f"{prefix} {k}".strip()
-
-            lines.extend(
-                json_to_semantic_text(v, current)
-            )
-
-    elif isinstance(data, list):
-
-        for item in data:
-
-            lines.extend(
-                json_to_semantic_text(item, prefix)
-            )
-
-    else:
-
-        lines.append(
-            f"{prefix} is {data}"
-        )
-
-    return lines
-
-
 def is_similar(text1, text2, threshold=0.8):
     # Simple similarity using overlap
     words1 = set(text1.lower().split())
