@@ -7,6 +7,9 @@ import google.generativeai as genai
 
 from vector_db import query_embeddings
 
+from db import get_chart_details_bulk
+from vector_db import query_chart_embeddings
+
 genai.configure(
     api_key=os.getenv("GEMINI_API_KEY")
 )
@@ -261,4 +264,89 @@ def query_docs_service(request):
     return {
         "query": request.query,
         "results": matches
+    }
+
+
+def welcome_message_service(request):
+
+    q = request.question.lower()
+
+    # -------------------------------
+    # CASE 1: Greeting
+    # -------------------------------
+    if "my name is" in q:
+
+        name = q.split("my name is")[-1].strip().replace(".", "").title()
+
+        return {
+            "answer": f"Hello {name}"
+        }
+
+    # -------------------------------
+    # CASE 2: Generic onboarding
+    # -------------------------------
+    if "ask questions about myself" in q:
+
+        return {
+            "answer": "Feel free to ask anything you would like guidance about."
+        }
+
+    # -------------------------------
+    # CASE 2.5: Simple Hello
+    # -------------------------------
+    if q.strip() in ["hello", "hi", "hey"]:
+
+        return {
+            "answer": "Hello ✨"
+        }
+
+    # -------------------------------
+    # CASE 3: Ascendant / Dasha
+    # -------------------------------
+    chart_details = get_chart_details_bulk(request.chart_ids)
+
+    if not chart_details:
+        return {
+            "answer": "I could not find your chart details."
+        }
+
+    all_chart_matches = []
+
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=request.question
+    )
+
+    query_embedding = response.data[0].embedding
+
+    for chart in chart_details:
+
+        results = query_chart_embeddings(
+            query_embedding,
+            chart["user_id"],
+            chart["profile_id"],
+            chart["chart_id"],
+            top_k=20
+        )
+
+        all_chart_matches.extend(results.matches)
+
+    # DEBUG HERE
+    print("\n===== TOP RETRIEVED CHUNKS =====")
+
+    for i, m in enumerate(all_chart_matches[:20], 1):
+        print(
+            f"{i}. SCORE={round(m.score,3)} | "
+            f"{m.metadata.get('text','')[:200]}"
+        )
+
+    context = build_context(all_chart_matches, None)
+
+    print("\n===== FINAL CONTEXT =====")
+    print(context[:5000])
+
+    answer = generate_answer(request.question, context)
+
+    return {
+        "answer": answer
     }
