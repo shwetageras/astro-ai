@@ -834,6 +834,17 @@ def process_question(
     print("TTL BREAKDOWN:")
     print(ttl_breakdown)
 
+    print("RETURNING RESPONSE FROM process_question")
+    print({
+        "source": source_name,
+        "used_sl": use_sl_as_context,
+        "used_kb": use_kb,
+        "used_chart": use_chart,
+        "rttl": c_rttl,
+        "c_ttl": ttl_breakdown,
+        "answer": answer[:50]
+    })
+
     return {
         "source": source_name,
 
