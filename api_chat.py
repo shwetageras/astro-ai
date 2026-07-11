@@ -1,17 +1,9 @@
-import time
 from fastapi import FastAPI
-# from google import genai
-from db import get_chart_details_bulk
 from db import get_job
-from kb_builder import client
-from vector_db import query_chart_embeddings
-from db import insert_qna, update_qna_answer
 from typing import List, Optional
-from vector_db import query_kb_embeddings_filtered
 from pydantic import BaseModel
 from vector_db import get_all_kb_chunks
 from chat_service import (
-    build_context,
     generate_answer,
     generate_answer_gpt_mini,
     generate_answer_gemini,
