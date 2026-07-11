@@ -2,16 +2,19 @@ from fastapi import FastAPI
 from db import get_job
 from typing import List, Optional
 from pydantic import BaseModel
+
 from chat_service import (
-    generate_answer,
-    generate_answer_gpt_mini,
-    generate_answer_gemini,
     query_docs_service,
     welcome_message_service,
     qna_sl_search_service,
     process_question,
 )
 
+from llm_service import (
+    generate_answer,
+    generate_answer_gpt_mini,
+    generate_answer_gemini,
+)
 
 app = FastAPI()
 
