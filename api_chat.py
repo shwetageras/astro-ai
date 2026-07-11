@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from db import get_job
 from typing import List, Optional
 from pydantic import BaseModel
-from vector_db import get_all_kb_chunks
 from chat_service import (
     generate_answer,
     generate_answer_gpt_mini,
@@ -15,76 +14,6 @@ from chat_service import (
 
 
 app = FastAPI()
-
-
-# -----------------------------------
-# EXACT KB MATCH HELPER
-# -----------------------------------
-
-def find_exact_kb_match(kb_id, question):
-
-    print("========== NEW FIND_EXACT_KB_MATCH RUNNING ==========")
-    if not question.lower().startswith("what is"):
-        return None
-
-    chunks = get_all_kb_chunks(kb_id)
-
-    search_term = (
-        question.lower()
-        .replace("what is", "")
-        .replace("?", "")
-        .strip()
-    )
-
-    print("SEARCH TERM:", search_term)
-
-    best_match = None
-    best_score = -1
-
-    for chunk in chunks:
-
-        text = chunk.metadata.get("text", "")
-        text_lower = text.lower()
-
-        if search_term not in text_lower:
-            continue
-
-        position = text_lower.find(search_term)
-
-        print("\n====================")
-        print("POSITION:", position)
-
-        start = max(0, position - 100)
-        end = min(len(text), position + 300)
-
-        print(text[start:end])
-
-        score = 0
-
-        score += max(0, 1000 - position)
-        
-        definition_pos = text_lower.find("definition")
-
-        if definition_pos >= 0 and abs(definition_pos - position) < 200:
-            score += 1000
-
-        if position >= 0:
-            score += max(0, 500 - position)
-
-        print(
-            f"CANDIDATE score={score} pos={position} def={definition_pos}"
-        )
-        print(text[:250])
-
-        if score > best_score:
-            best_score = score
-            best_match = chunk
-
-    if best_match:
-        print("BEST SCORE:", best_score)
-        print("BEST MATCH:", best_match.metadata.get("text", "")[:300])
-
-    return best_match
 
 
 class QueryRequest(BaseModel):
