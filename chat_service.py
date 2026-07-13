@@ -2,9 +2,9 @@ import time
 
 from vector_db import query_embeddings
 
-from kb_builder import client
-
 from llm_service import generate_answer
+
+from embedding_service import generate_query_embedding
 
 from vector_db import (
     query_chart_embeddings,
@@ -141,12 +141,9 @@ def build_context(chart_results, kb_results):
 def query_docs_service(request):
 
     # Create embedding for query
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.query
+    query_embedding = generate_query_embedding(
+        request.query
     )
-    
-    query_embedding = response.data[0].embedding
 
     # Search Pinecone
     results = query_embeddings(query_embedding)
@@ -210,12 +207,9 @@ def welcome_message_service(request):
 
     all_chart_matches = []
 
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
+    query_embedding = generate_query_embedding(
+        request.question
     )
-
-    query_embedding = response.data[0].embedding
 
     for chart in chart_details:
 
@@ -320,12 +314,9 @@ def qna_sl_search_service(question, kb_id):
 
     print("INSIDE QNA SL SEARCH")
 
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=question
+    query_embedding = generate_query_embedding(
+        question
     )
-
-    query_embedding = response.data[0].embedding
 
     results = query_qna_sl_embeddings(
         query_embedding,
@@ -517,16 +508,14 @@ def process_question(
     # -------------------------------
     embedding_start = time.perf_counter()
 
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=request.question
+    query_embedding = generate_query_embedding(
+        request.question
     )
 
     ttl_q_embedding = round(
         (time.perf_counter() - embedding_start) * 1000,
         2
     )
-    query_embedding = response.data[0].embedding
 
     # -------------------------------
     # STEP 4: CHART RETRIEVAL
