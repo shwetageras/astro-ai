@@ -4,7 +4,7 @@ from vector_db import query_embeddings
 
 from llm_service import generate_answer
 
-from embedding_service import generate_query_embedding
+from embedder_client import generate_query_embedding
 
 from vector_db import (
     query_chart_embeddings,
