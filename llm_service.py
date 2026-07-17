@@ -6,7 +6,7 @@ from settings import (
     GEMINI_MODEL,
 )
 
-from kb_builder import client
+from openai_client import client
 from prompts import build_prompt
 
 import google.generativeai as genai

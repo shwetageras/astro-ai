@@ -1,11 +1,13 @@
 from pypdf import PdfReader
-from openai import OpenAI
 import os
 import re
 import tiktoken
 import json
-from dotenv import load_dotenv
 from storage import save_kb_to_s3
+
+from openai_client import client
+
+from embedding_service import generate_embeddings
 
 # -------------------------------
 # PDF READING
@@ -90,8 +92,7 @@ def chunk_json_text(text, max_tokens=400):
 # -------------------------------
 # OPENAI SETUP
 # -------------------------------
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Moved to openai_client.py
 
 
 # -------------------------------
@@ -104,12 +105,9 @@ def create_embeddings(chunks):
     for i in range(0, len(chunks), BATCH_SIZE):
         batch = chunks[i:i + BATCH_SIZE]
 
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=batch
+        all_embeddings.extend(
+            generate_embeddings(batch)
         )
-
-        all_embeddings.extend([item.embedding for item in response.data])
 
     return all_embeddings
 
