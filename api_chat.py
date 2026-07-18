@@ -98,9 +98,9 @@ class RetrievalTestRequest(BaseModel):
     top_k: int = 20
 
 
-# -----------------------------------
+# ----------------------------------
 # ACTIVE ENDPOINTS
-# -----------------------------------
+# ----------------------------------
 
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
