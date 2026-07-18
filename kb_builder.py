@@ -5,8 +5,6 @@ import tiktoken
 import json
 from storage import save_kb_to_s3
 
-from openai_client import client
-
 from embedding_service import generate_embeddings
 
 # -------------------------------
