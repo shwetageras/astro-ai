@@ -4,8 +4,6 @@ EMBEDDER_URL = "http://127.0.0.1:8002"
 
 
 def generate_query_embedding(text: str):
-    raise Exception("EMBEDDER CLIENT EXECUTED")
-    
     response = requests.post(
         f"{EMBEDDER_URL}/embed",
         json={"text": text},
