@@ -1,0 +1,13 @@
+[Unit]
+Description=API Chat Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/astro-ai
+ExecStart=/usr/bin/python3 -m uvicorn api_chat:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
