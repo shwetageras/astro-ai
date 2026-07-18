@@ -1,6 +1,11 @@
 import requests
 
-EMBEDDER_URL = "http://127.0.0.1:8002"
+import os
+
+EMBEDDER_URL = os.getenv(
+    "EMBEDDER_URL",
+    "http://127.0.0.1:8002"
+)
 
 
 def generate_query_embedding(text: str):
