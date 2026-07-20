@@ -4,7 +4,9 @@ After=network.target
 
 [Service]
 User=ubuntu
+Group=ubuntu
 WorkingDirectory=/home/ubuntu/astro-ai
+EnvironmentFile=/home/ubuntu/astro-ai/.env
 ExecStart=/home/ubuntu/astro-ai/venv/bin/python -m uvicorn embedding_api:app --host 0.0.0.0 --port 8002
 Restart=always
 RestartSec=5
