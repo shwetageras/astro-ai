@@ -1,7 +1,7 @@
 import json
 import google.generativeai as genai
 
-from kb_builder import client
+from openai_client import client
 from vector_db import get_all_kb_chunks
 from prompts import build_qna_generation_prompt
 from db import insert_generated_qna
