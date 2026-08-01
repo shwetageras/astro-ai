@@ -1,0 +1,13 @@
+[Unit]
+Description=Admin API Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/astro-ai
+Environment="PATH=/home/ubuntu/astro-ai/venv/bin"
+ExecStart=/home/ubuntu/astro-ai/venv/bin/python -m uvicorn api_admin:app --host 0.0.0.0 --port 8004
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
