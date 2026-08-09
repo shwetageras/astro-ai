@@ -3,7 +3,7 @@ import google.generativeai as genai
 
 from openai_client import client
 from vector_db import get_all_kb_chunks
-from prompts import build_qna_generation_prompt
+from admin_prompts import build_qna_generation_prompt
 from db import insert_generated_qna
 from db import get_file_id_from_job
 from settings import OPENAI_MODEL, GEMINI_MODEL, QNA_GENERATION_MODEL

@@ -7,7 +7,7 @@ from settings import (
 )
 
 from openai_client import client
-from prompts import build_prompt
+from chat_prompts import build_prompt
 
 import google.generativeai as genai
 

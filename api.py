@@ -14,7 +14,7 @@ from db import get_chart_details_bulk, soft_delete_chart_job, get_chart_job
 from db import insert_job, get_job, update_job
 from vector_db import upsert_embeddings
 from vector_db import query_embeddings
-from kb_builder import client
+from openai_client import client
 from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
 from vector_db import query_chart_embeddings
