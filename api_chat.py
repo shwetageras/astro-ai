@@ -10,7 +10,7 @@ from chat_service import (
     process_question,
 )
 
-from llm_service import (
+from llm_client import (
     generate_answer,
     generate_answer_gpt_mini,
     generate_answer_gemini,
