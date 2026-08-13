@@ -6,6 +6,8 @@ from llm_service import generate_answer
 
 from embedder_client import generate_query_embedding
 
+from retrieval_client import retrieve_context
+
 from vector_db import (
     query_chart_embeddings,
     query_kb_embeddings_filtered,
@@ -355,7 +357,6 @@ def process_question(
     start_time = time.time()
 
     chart_ids = request.chart_ids
-    
     kb_ids = request.kb_id
 
     # normalize safely
@@ -377,123 +378,20 @@ def process_question(
     print("USE SL:", use_sl)
 
     # -------------------------------
-    # STEP 0: Initialize SL vars
-    # -------------------------------
-    use_sl_as_context = False
-    
-    ttl_q_embedding = 0
-    ttl_sl_match = 0
-    ttl_kb_context = 0
-    ttl_chart_context = 0
-    ttl_reasoning = 0
-    ttl_delivery = 0
-
-    # -------------------------------
-    # STEP 0.1: Check SL memory
-    # -------------------------------
-    if use_sl:
-
-        sl_start = time.perf_counter()
-
-        sl_result = qna_sl_search_service(
-            request.question,
-            kb_id
-        )
-
-        ttl_sl_match = round(
-            (time.perf_counter() - sl_start) * 1000,
-            2
-        )
-
-        sl_found = sl_result.get("found")
-        matches = sl_result.get("matches", [])
-
-        if not matches:
-            sl_found = False
-            sl_score = None
-            second = None
-        else:
-            best = matches[0]
-            second = matches[1] if len(matches) > 1 else None
-            sl_score = best["score"]
-
-    else:
-
-        print("SL DISABLED")
-
-        sl_found = False
-        matches = []
-        sl_score = None
-        second = None
-        
-    # 🔍 DEBUG PRINTS
-    print("SL FOUND:", sl_found)
-    print("FIRST MATCH SCORE:", sl_score)
-    print("SECOND MATCH SCORE:", second["score"] if second else None)
-    print("MATCH COUNT:", len(matches))
-    print("MATCH SCORES (top 5):", [round(m["score"], 2) for m in matches[:5]])
-
-    # -------------------------
-    # STEP 0.2: Decision logic 
-    # -------------------------
-    use_sl_as_context = False
-    sl_context = None
-
-    if sl_found and sl_score is not None:
-
-        # 🟢 STRONG + 🟡 MEDIUM → BOTH go to context (NO DIRECT REUSE)
-        if sl_score >= 0.60:
-
-            selected_matches = [
-                m for m in sorted(matches, key=lambda x: x["score"], reverse=True)
-                if m["score"] >= 0.60 and m.get("answer")
-            ][:3]
-
-            formatted_matches = []
-
-            for m in selected_matches:
-
-                answer = m.get("answer") or ""
-                question = m.get("question") or ""
-
-                short_answer = (
-                    answer[:300].rsplit(' ', 1)[0] + "..."
-                    if len(answer) > 300
-                    else answer
-                )
-
-                formatted_matches.append(
-                    f"Previous QnA (score {round(m['score'],2)}):\n"
-                    f"Q: {question}\n"
-                    f"A: {short_answer}"
-                )
-
-            sl_context = "\n\n".join(formatted_matches)
-
-            use_sl_as_context = True
-
-        # 🔴 LOW → ignore
-        else:
-            use_sl_as_context = False
-            sl_context = None
-
-    # 🔍 DEBUG
-    print("USING SL CONTEXT:", use_sl_as_context)
-
-    # -------------------------------
     # STEP 1: INIT
     # -------------------------------
     qna_id = None
     chart_details = []
-    all_chart_matches = []
 
     # -------------------------------
     # STEP 2: FETCH CHART + STORE QNA
     # -------------------------------
     if use_chart:
+
         chart_details = get_chart_details_bulk(chart_ids)
 
         if chart_details:
+
             primary_chart = chart_details[0]
 
             qna_id = insert_qna(
@@ -504,141 +402,68 @@ def process_question(
             )
 
     # -------------------------------
-    # STEP 3: EMBEDDING
+    # STEP 3: RETRIEVAL SERVICE
     # -------------------------------
-    embedding_start = time.perf_counter()
+    retrieval_start = time.perf_counter()
 
-    query_embedding = generate_query_embedding(
-        request.question
+    retrieval_result = retrieve_context(
+        question=request.question,
+        chart_details=chart_details,
+        kb_ids=kb_ids,
+        sl_ids=request.sl_id,
+        previous_question=request.previous_question,
+        previous_answer=request.previous_answer,
     )
 
-    ttl_q_embedding = round(
-        (time.perf_counter() - embedding_start) * 1000,
+    ttl_retrieval = round(
+        (time.perf_counter() - retrieval_start) * 1000,
         2
     )
 
     # -------------------------------
-    # STEP 4: CHART RETRIEVAL
+    # STEP 4: RETRIEVAL RESPONSE
     # -------------------------------
-    chart_start = time.perf_counter()
-
-    if use_chart and chart_details:
-        for chart in chart_details:
-            results = query_chart_embeddings(
-                query_embedding,
-                chart["user_id"],
-                chart["profile_id"],
-                chart["chart_id"],
-                top_k=10
-            )
-            all_chart_matches.extend(results.matches)
-
-    ttl_chart_context = round(
-        (time.perf_counter() - chart_start) * 1000,
-        2
+    context = retrieval_result.get(
+        "context",
+        ""
     )
 
-
-    # -------------------------------
-    # STEP 5: KB RETRIEVAL
-    # -------------------------------
-
-    kb_results = None
-
-    kb_start = time.perf_counter()
-
-    if use_kb:
-
-        exact_match = find_exact_kb_match(
-            kb_ids[0],
-            request.question
-        )
-
-        if exact_match:
-
-            print("USING EXACT MATCH")
-
-            kb_results = [exact_match]
-
-        else:
-
-            print("USING VECTOR SEARCH")
-
-            kb_results = query_kb_embeddings_filtered(
-                query_embedding,
-                kb_ids,
-                top_k=15
-            )
-
-    ttl_kb_context = round(
-        (time.perf_counter() - kb_start) * 1000,
-        2
+    use_sl_as_context = retrieval_result.get(
+        "used_sl",
+        False
     )
 
-    # -------------------------------
-    # STEP 6: DEBUG
-    # -------------------------------
+    used_kb = retrieval_result.get(
+        "used_kb",
+        use_kb
+    )
 
-    print("\n--- KB RESULTS ---")
+    used_chart = retrieval_result.get(
+        "used_chart",
+        bool(use_chart)
+    )
 
-    if kb_results:
+    retrieval_rttl = retrieval_result.get(
+        "rttl",
+        ttl_retrieval
+    )
 
-        if isinstance(kb_results, list):
-            for match in kb_results:
-                print(f"Score: EXACT_MATCH | {match.metadata.get('text', '')[:100]}")
-        else:
-            for match in kb_results.matches:
-                print(f"Score: {round(match.score, 3)} | {match.metadata.get('text', '')[:100]}")
+    retrieval_c_ttl = retrieval_result.get(
+        "c_ttl",
+        []
+    )
 
-    # -------------------------------
-    # STEP 7: CONTEXT BUILDING
-    # -------------------------------
-    prompt_start = time.perf_counter()
-
-    if not use_chart and not use_kb:
-        context = ""   # 🔥 PURE LLM MODE
-    else:
-        context = build_context(all_chart_matches, kb_results)
-
-    # -------------------------------
-    # Inject SL context (if medium confidence)
-    # -------------------------------
-    print("INJECTING SL INTO CONTEXT:", use_sl_as_context)
-
-    if use_sl_as_context and sl_context:
-
-        context = (
-            "Relevant past learned answers (use as base, refine and synthesize):\n"
-            f"{sl_context}\n\n"
-            f"{context}"
-        )
+    print("\n--- RETRIEVAL RESULT ---")
+    print("USED SL:", use_sl_as_context)
+    print("USED KB:", used_kb)
+    print("USED CHART:", used_chart)
+    print("RETRIEVAL RTTL:", retrieval_rttl)
 
     print("\n--- FINAL CONTEXT ---")
     print(context[:1000])
 
-
     # -------------------------------
-    # Inject previous conversation
-    # -------------------------------
-    if request.previous_question and request.previous_answer:
-
-        conversation_context = f"""
-    PREVIOUS CONVERSATION:
-
-    User: {request.previous_question}
-
-    Astrologer: {request.previous_answer}
-    """
-
-        context = f"{conversation_context}\n\n{context}"
-
-    ttl_context_build = round(
-        (time.perf_counter() - prompt_start) * 1000,
-        2
-    )
-
-    # -------------------------------
-    # STEP 8: GENERATE ANSWER
+    # STEP 5: GENERATE ANSWER
     # -------------------------------
     reasoning_start = time.perf_counter()
 
@@ -647,19 +472,21 @@ def process_question(
         context
     )
 
-
     ttl_reasoning = round(
         (time.perf_counter() - reasoning_start) * 1000,
         2
     )
 
     # -------------------------------
-    # STEP 9: STORE ANSWER
+    # STEP 6: STORE ANSWER
     # -------------------------------
     delivery_start = time.perf_counter()
 
     if qna_id:
-        update_qna_answer(qna_id, answer)
+        update_qna_answer(
+            qna_id,
+            answer
+        )
 
     ttl_delivery = round(
         (time.perf_counter() - delivery_start) * 1000,
@@ -667,33 +494,22 @@ def process_question(
     )
 
     # -------------------------------
-    # STEP 10: RESPONSE
+    # STEP 7: RESPONSE
     # -------------------------------
     c_rttl = round(
         (time.time() - start_time) * 1000,
         2
     )
 
-    ttl_breakdown = [
+    # Retrieval service already provides
+    # its internal stage-level metrics.
+    ttl_breakdown = retrieval_c_ttl.copy()
+
+    # Add Chat-side stages.
+    ttl_breakdown.extend([
         {
-            "stage": "ttl_q_embedding",
-            "time_ms": ttl_q_embedding
-        },
-        {
-            "stage": "ttl_sl_match",
-            "time_ms": ttl_sl_match
-        },
-        {
-            "stage": "ttl_kb_context",
-            "time_ms": ttl_kb_context
-        },
-        {
-            "stage": "ttl_chart_context",
-            "time_ms": ttl_chart_context
-        },
-        {
-            "stage": "ttl_context_build",
-            "time_ms": ttl_context_build
+            "stage": "ttl_retrieval_total",
+            "time_ms": ttl_retrieval
         },
         {
             "stage": "ttl_reasoning",
@@ -703,7 +519,7 @@ def process_question(
             "stage": "ttl_delivery",
             "time_ms": ttl_delivery
         }
-    ]
+    ])
 
     print("TOTAL RTTL (ms):", c_rttl)
 
@@ -711,11 +527,12 @@ def process_question(
     print(ttl_breakdown)
 
     print("RETURNING RESPONSE FROM process_question")
+
     print({
         "source": source_name,
         "used_sl": use_sl_as_context,
-        "used_kb": use_kb,
-        "used_chart": use_chart,
+        "used_kb": used_kb,
+        "used_chart": used_chart,
         "rttl": c_rttl,
         "c_ttl": ttl_breakdown,
         "answer": answer[:50]
@@ -724,8 +541,8 @@ def process_question(
     response = {
         "source": source_name,
         "used_sl": use_sl_as_context,
-        "used_kb": use_kb,
-        "used_chart": use_chart,
+        "used_kb": used_kb,
+        "used_chart": used_chart,
         "rttl": c_rttl,
         "c_ttl": ttl_breakdown,
         "answer": answer,
