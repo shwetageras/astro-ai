@@ -2,7 +2,7 @@ import time
 
 from vector_db import query_embeddings
 
-from llm_service import generate_answer
+from llm_client import generate_answer
 
 from embedder_client import generate_query_embedding
 
