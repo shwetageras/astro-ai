@@ -5,7 +5,7 @@ import tiktoken
 import json
 from storage import save_kb_to_s3
 
-from embedding_service import generate_embeddings
+from embedder_client import generate_embeddings
 
 # -------------------------------
 # PDF READING
