@@ -5,7 +5,7 @@ import json
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from storage import save_file, save_metadata
 from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb, chunk_json_text
-from db import get_job
+from db import get_chart_job
 from vector_db import upsert_embeddings
 from notifier import notify_chart_status
 from db import insert_chart_job, update_chart_job
@@ -268,7 +268,7 @@ def process_chart_text(content, file_id, job_id, chart_id, user_id, profile_id, 
 
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
-    job = get_job(job_id)
+    job = get_chart_job(job_id)
 
     if not job:
         return {"error": "Job not found"}
