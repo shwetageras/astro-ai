@@ -402,13 +402,25 @@ def process_question(
             )
 
     # -------------------------------
+    # Prepare chart details for Retrieval API
+    # -------------------------------
+    chart_details_for_retrieval = [
+        {
+            "user_id": str(chart["user_id"]),
+            "profile_id": chart["profile_id"],
+            "chart_id": str(chart["chart_id"]),
+        }
+        for chart in chart_details
+    ]
+
+    # -------------------------------
     # STEP 3: RETRIEVAL SERVICE
     # -------------------------------
     retrieval_start = time.perf_counter()
 
     retrieval_result = retrieve_context(
         question=request.question,
-        chart_details=chart_details,
+        chart_details=chart_details_for_retrieval,
         kb_ids=kb_ids,
         sl_ids=request.sl_id,
         previous_question=request.previous_question,
