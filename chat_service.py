@@ -2,7 +2,7 @@ import time
 
 from vector_db import query_embeddings
 
-from llm_client import generate_answer
+from llm_client import generate_answer, generate_answer_gemini
 
 from embedder_client import generate_query_embedding
 
@@ -239,7 +239,7 @@ def welcome_message_service(request):
     print("\n===== FINAL CONTEXT =====")
     print(context[:5000])
 
-    answer = generate_answer(request.question, context)
+    answer = generate_answer_gemini(request.question, context)
 
     return {
         "answer": answer
