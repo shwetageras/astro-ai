@@ -349,6 +349,10 @@ class RetrievalTestRequest(BaseModel):
     kb_id: List[str] = []
     sl_id: List[str] = []
 
+    user_id: Optional[int] = None
+    profile_id: Optional[int] = None
+    chart_id: Optional[str] = None
+
     previous_question: Optional[str] = None
     previous_answer: Optional[str] = None
 
@@ -357,7 +361,6 @@ class RetrievalTestRequest(BaseModel):
     include_sl: bool = True
 
     top_k: int = 20
-
 
 
 
@@ -841,9 +844,30 @@ async def retrieval_test(request: RetrievalTestRequest):
         chart_details = []
         all_chart_matches = []
 
-        if request.chart_ids:
+        if request.chart_id:
 
-            chart_details = get_chart_details_bulk(request.chart_ids)
+            chart_details = get_chart_details_bulk(
+                [request.chart_id]
+            )
+
+            for chart in chart_details:
+
+                results = query_chart_embeddings(
+                    query_embedding,
+                    chart["user_id"],
+                    chart["profile_id"],
+                    chart["chart_id"],
+                    top_k=request.top_k
+                )
+
+                all_chart_matches.extend(results.matches)
+
+        elif request.chart_ids:
+
+            # Backward compatibility with old payload
+            chart_details = get_chart_details_bulk(
+                request.chart_ids
+            )
 
             for chart in chart_details:
 
@@ -887,6 +911,16 @@ async def retrieval_test(request: RetrievalTestRequest):
                     request.kb_id,
                     top_k=request.top_k
                 )
+
+        else:
+
+            print("SEARCHING ALL KBs")
+
+            kb_results = query_kb_embeddings_filtered(
+                query_embedding,
+                [],
+                top_k=request.top_k
+            )
 
         # --------------------------------
         # NOISE FILTER

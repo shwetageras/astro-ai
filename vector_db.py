@@ -118,14 +118,30 @@ def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=50):
 
     print("KB IDS RECEIVED:", kb_ids)
 
-    results = index.query(
-        vector=query_embedding,
-        top_k=top_k,
-        include_metadata=True,
-        filter={
-            "file_id": {"$in": kb_ids}
-        }
-    )
+    if kb_ids:
+
+        results = index.query(
+            vector=query_embedding,
+            top_k=top_k,
+            include_metadata=True,
+            filter={
+                "file_id": {"$in": kb_ids}
+            }
+        )
+
+    else:
+
+        print("SEARCHING ALL KBs")
+
+        results = index.query(
+            vector=query_embedding,
+            top_k=top_k,
+            include_metadata=True,
+            filter={
+                "chart_id": {"$exists": False},
+                "type": {"$ne": "qna_sl"}
+            }
+        )
 
     print("KB MATCHES FOUND:", len(results.matches))
 
@@ -138,7 +154,7 @@ def query_kb_embeddings_filtered(query_embedding, kb_ids, top_k=50):
         print(
             match.metadata.get("text", "")[:500]
         )
-    
+
     return results
 
 
