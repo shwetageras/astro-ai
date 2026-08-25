@@ -349,6 +349,14 @@ def build_context(chart_results, kb_results):
         selected_kb
     )
 
+    # --------------------------------
+    # GLOBAL FINAL RANKING
+    # --------------------------------
+
+    selected.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
 
     print("\n===== FINAL CONTEXT BUCKET =====")
 
