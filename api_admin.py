@@ -106,20 +106,31 @@ def is_similar(text1, text2, threshold=0.8):
 
 def build_context(chart_results, kb_results):
 
-    all_chunks = []
+    all_chart_chunks = []
+    all_kb_chunks = []
 
-    
-    # Handle both cases: list or Pinecone object
-    chart_matches = chart_results.matches if hasattr(chart_results, "matches") else chart_results
+    # --------------------------------
+    # HANDLE CHART RESULTS
+    # --------------------------------
 
-    # -------- Step 1: Collect all --------
+    chart_matches = (
+        chart_results.matches
+        if hasattr(chart_results, "matches")
+        else chart_results
+    )
+
     for match in chart_matches:
-        all_chunks.append({
+
+        all_chart_chunks.append({
             "score": match.score,
             "text": match.metadata.get("text", ""),
             "source": "chart"
         })
 
+
+    # --------------------------------
+    # HANDLE KB RESULTS
+    # --------------------------------
 
     if kb_results:
 
@@ -130,68 +141,257 @@ def build_context(chart_results, kb_results):
         )
 
         for match in kb_matches:
-            all_chunks.append({
+
+            all_kb_chunks.append({
                 "score": match.score,
                 "text": match.metadata.get("text", ""),
                 "source": "kb"
             })
 
-    # -------- Step 2: Sort globally --------
-    all_chunks.sort(key=lambda x: x["score"], reverse=True)
 
-    print("\n===== TOP CHUNKS AFTER GLOBAL SORT =====")
+    # --------------------------------
+    # SORT EACH SOURCE INDEPENDENTLY
+    # --------------------------------
 
-    for c in all_chunks[:15]:
+    all_chart_chunks.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+    all_kb_chunks.sort(
+        key=lambda x: x["score"],
+        reverse=True
+    )
+
+
+    print("\n===== CHART RETRIEVAL =====")
+
+    for idx, chunk in enumerate(
+        all_chart_chunks[:10]
+    ):
+
         print(
-            c["source"],
-            round(c["score"], 4),
-            c["text"][:100]
+            "CHART",
+            idx + 1,
+            round(chunk["score"], 4),
+            chunk["text"][:150]
         )
 
-    all_chunks_backup = all_chunks.copy()
 
-    # -------- Step 3: Filter by threshold --------
-    SCORE_THRESHOLD = 0.45
+    print("\n===== KB RETRIEVAL =====")
+
+    for idx, chunk in enumerate(
+        all_kb_chunks[:10]
+    ):
+
+        print(
+            "KB",
+            idx + 1,
+            round(chunk["score"], 4),
+            chunk["text"][:150]
+        )
+
+
+    # --------------------------------
+    # FINAL CONTEXT SELECTION
+    # --------------------------------
+
     MAX_CONTEXT_CHUNKS = 6
     MAX_CONTEXT_CHARS = 3000
 
-    filtered_chunks = [c for c in all_chunks if c["score"] >= SCORE_THRESHOLD]
+    selected_chart = []
+    selected_kb = []
 
-    # Fallback if nothing passes threshold
-    if not filtered_chunks:
-        filtered_chunks = all_chunks_backup[:15]   # take top 15 anyway
 
-    all_chunks = filtered_chunks
+    # --------------------------------
+    # BOTH SOURCES AVAILABLE
+    # --------------------------------
 
-    # -------- Step 4: De-duplicate --------
-    selected = []
+    if all_chart_chunks and all_kb_chunks:
 
-    for chunk in all_chunks:
-        if not any(is_similar(chunk["text"], s["text"]) for s in selected):
-            selected.append(chunk)
+        # Always preserve at least one
+        # user-specific Chart chunk.
+        selected_chart.append(
+            all_chart_chunks[0]
+        )
 
-        if len(selected) >= MAX_CONTEXT_CHUNKS:
-            break
+        # Always preserve at least one
+        # Knowledge Base chunk.
+        selected_kb.append(
+            all_kb_chunks[0]
+        )
 
-    # -------- Step 5: Separate again (for structure) --------
-    chart_data = [c for c in selected if c["source"] == "chart"]
-    kb_data = [c for c in selected if c["source"] == "kb"]
 
-    if not chart_data:
-        chart_data = [c for c in all_chunks if c["source"] == "chart"][:2]
+        chart_candidates = all_chart_chunks[1:]
+        kb_candidates = all_kb_chunks[1:]
 
-    # -------- Step 6: Build structured context --------
+
+        remaining_slots = (
+            MAX_CONTEXT_CHUNKS
+            - len(selected_chart)
+            - len(selected_kb)
+        )
+
+
+        # --------------------------------
+        # DYNAMIC SOURCE ALLOCATION
+        # --------------------------------
+
+        for _ in range(remaining_slots):
+
+            if not chart_candidates and not kb_candidates:
+                break
+
+
+            if not chart_candidates:
+
+                selected_kb.append(
+                    kb_candidates.pop(0)
+                )
+
+                continue
+
+
+            if not kb_candidates:
+
+                selected_chart.append(
+                    chart_candidates.pop(0)
+                )
+
+                continue
+
+
+            # --------------------------------
+            # NORMALIZE SCORES WITHIN SOURCE
+            # --------------------------------
+
+            chart_max_score = all_chart_chunks[0]["score"]
+            kb_max_score = all_kb_chunks[0]["score"]
+
+
+            chart_score = chart_candidates[0]["score"]
+            kb_score = kb_candidates[0]["score"]
+
+
+            chart_normalized = (
+                chart_score / chart_max_score
+                if chart_max_score > 0
+                else 0
+            )
+
+
+            kb_normalized = (
+                kb_score / kb_max_score
+                if kb_max_score > 0
+                else 0
+            )
+
+
+            # --------------------------------
+            # CHART PRIORITY
+            # --------------------------------
+            #
+            # If both candidates are reasonably
+            # close, prefer Chart because Chart
+            # is the user-specific source.
+            #
+            # If KB is clearly stronger, allow
+            # KB to take the slot.
+            # --------------------------------
+
+            CHART_PRIORITY_MARGIN = 0.05
+
+
+            if (
+                chart_normalized
+                >= kb_normalized - CHART_PRIORITY_MARGIN
+            ):
+
+                selected_chart.append(
+                    chart_candidates.pop(0)
+                )
+
+            else:
+
+                selected_kb.append(
+                    kb_candidates.pop(0)
+                )
+
+
+    # --------------------------------
+    # ONLY CHART AVAILABLE
+    # --------------------------------
+
+    elif all_chart_chunks:
+
+        selected_chart = all_chart_chunks[
+            :MAX_CONTEXT_CHUNKS
+        ]
+
+
+    # --------------------------------
+    # ONLY KB AVAILABLE
+    # --------------------------------
+
+    elif all_kb_chunks:
+
+        selected_kb = all_kb_chunks[
+            :MAX_CONTEXT_CHUNKS
+        ]
+
+
+    # --------------------------------
+    # FINAL BUCKET
+    # --------------------------------
+
+    selected = (
+        selected_chart +
+        selected_kb
+    )
+
+
+    print("\n===== FINAL CONTEXT BUCKET =====")
+
+    for idx, chunk in enumerate(
+        selected
+    ):
+
+        print(
+            idx + 1,
+            chunk["source"].upper(),
+            round(chunk["score"], 4),
+            chunk["text"][:150]
+        )
+
+
+    # --------------------------------
+    # BUILD STRUCTURED CONTEXT
+    # --------------------------------
+
     context = ""
 
-    if chart_data:
-        context += "CHART DATA:\n"
-        for c in chart_data:
-            context += f"- {c['text'].strip()}\n"
 
-    if kb_data:
+    if selected_chart:
+
+        context += "CHART DATA:\n"
+
+        for chunk in selected_chart:
+
+            context += (
+                f"- {chunk['text'].strip()}\n"
+            )
+
+
+    if selected_kb:
+
         context += "\nKNOWLEDGE BASE:\n"
-        for c in kb_data:
-            context += f"- {c['text'].strip()}\n"
+
+        for chunk in selected_kb:
+
+            context += (
+                f"- {chunk['text'].strip()}\n"
+            )
+
 
     print("\n===== FINAL CONTEXT SENT TO GPT =====")
     print(context)
@@ -199,15 +399,15 @@ def build_context(chart_results, kb_results):
 
     print(
         "FINAL CHART CHUNKS:",
-        len(chart_data)
+        len(selected_chart)
     )
 
     print(
         "FINAL KB CHUNKS:",
-        len(kb_data)
+        len(selected_kb)
     )
 
-    return context[:MAX_CONTEXT_CHARS]
+    return context[:MAX_CONTEXT_CHARS], selected
 
 
 def process_text(text, file_id, file_name, job_id, timestamp):
@@ -1036,7 +1236,7 @@ async def retrieval_test(request: RetrievalTestRequest):
 
         chart_matches = filtered_matches
 
-        context = build_context(
+        context, final_bucket = build_context(
             chart_matches,
             kb_results
         )
@@ -1087,13 +1287,13 @@ async def retrieval_test(request: RetrievalTestRequest):
 
                 {
                     "rank": idx + 1,
-                    "score": round(reranked[idx][0], 4),
-                    "file_id": match.metadata.get("file_id"),
-                    "text": match.metadata.get("text", "")[:500]
+                    "source": chunk["source"],
+                    "score": round(chunk["score"], 4),
+                    "text": chunk["text"][:500]
                 }
 
-                for idx, match in enumerate(
-                    filtered_matches[:10]
+                for idx, chunk in enumerate(
+                    final_bucket
                 )
             ],
 
