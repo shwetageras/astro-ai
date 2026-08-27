@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Form
 from settings import OPENAI_MODEL
 # from google import genai
 from storage import save_file, save_metadata
-from kb_builder import read_pdf, chunk_text, create_embeddings, build_kb, save_kb
+from kb_builder import read_pdf, chunk_text, semantic_chunk_text, create_embeddings, build_kb, save_kb
 from notifier import notify_embedding_status
 from db import get_chart_details_bulk, soft_delete_chart_job, get_chart_job
 from db import insert_job, get_job, update_job
@@ -66,7 +66,7 @@ def process_pdf(file_bytes, file_id, file_name, job_id, timestamp):
         else:
             raise Exception(f"Unsupported file type: {file_ext}")
         
-        chunks = chunk_text(text)
+        chunks = semantic_chunk_text(text)
         print(f"📊 Total chunks created: {len(chunks)}")
 
         embeddings = create_embeddings(chunks)
@@ -420,7 +420,7 @@ def build_context(chart_results, kb_results):
 
 def process_text(text, file_id, file_name, job_id, timestamp):
     try:
-        chunks = chunk_text(text)
+        chunks = semantic_chunk_text(text)
         print(f"📊 Total chunks created: {len(chunks)}")
 
         embeddings = create_embeddings(chunks)
