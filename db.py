@@ -221,7 +221,7 @@ def get_chart_details_bulk(job_ids):
     query = """
         SELECT job_id, chart_id, user_id, profile_id
         FROM charts_jobs
-        WHERE job_id = ANY(%s)
+        WHERE chart_id = ANY(%s)
         AND is_deleted = FALSE
     """
 
