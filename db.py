@@ -212,8 +212,10 @@ def update_qna_answer(qna_id, answer):
     conn.close()
 
 
-def get_chart_details_bulk(job_ids):
+def get_chart_details_bulk(chart_ids):
     from psycopg2.extras import RealDictCursor
+
+    chart_ids = [int(chart_id) for chart_id in chart_ids]
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -225,7 +227,7 @@ def get_chart_details_bulk(job_ids):
         AND is_deleted = FALSE
     """
 
-    cursor.execute(query, (job_ids,))
+    cursor.execute(query, (chart_ids,))
     results = cursor.fetchall()
 
     cursor.close()
