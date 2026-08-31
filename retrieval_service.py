@@ -74,7 +74,7 @@ def build_context(chart_results, kb_results):
     # -------- Step 3: Filter by threshold --------
     SCORE_THRESHOLD = 0.45
     MAX_CONTEXT_CHUNKS = 6
-    MAX_CONTEXT_CHARS = 3000
+    MAX_CONTEXT_CHARS = 8000
 
     filtered_chunks = [
         c for c in all_chunks
