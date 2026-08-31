@@ -1,5 +1,7 @@
 import os
 
+from datetime import date
+
 from settings import (
     OPENAI_MODEL,
     OPENAI_MINI_MODEL,
@@ -93,7 +95,12 @@ def generate_answer_gpt_mini(question, context):
 
 
 def generate_answer_gemini(question, context):
-    prompt = build_prompt(question, context)
+    current_date = date.today().isoformat()
+
+    prompt = build_prompt(
+        question,
+        f"CURRENT DATE: {current_date}\n\n{context}"
+    )
 
     try:
         model = genai.GenerativeModel(GEMINI_MODEL)
