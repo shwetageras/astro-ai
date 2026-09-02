@@ -1,0 +1,42 @@
+{
+  "houses": {
+    "1": ["self", "health", "personality", "appearance", "body", "lagna", "head", "mindset", "physique"],
+    "2": ["wealth", "money", "savings", "family", "speech", "assets", "voice", "bank", "cash", "finance"],
+    "3": ["sibling", "brother", "sister", "courage", "writing", "communication", "effort", "short travel", "hobbies"],
+    "4": ["mother", "home", "house", "property", "vehicle", "car", "peace", "land", "real estate"],
+    "5": ["child", "children", "kid", "romance", "love", "dating", "education", "stock", "speculation", "intellect"],
+    "6": ["job", "disease", "illness", "debt", "loan", "enemy", "court", "lawsuit", "competition", "litigation", "service"],
+    "7": ["marriage", "spouse", "wife", "husband", "partner", "relationship", "business partner"],
+    "8": ["occult", "secret", "longevity", "accident", "transformation", "inlaw", "inheritance", "sudden event", "research"],
+    "9": ["luck", "fortune", "father", "guru", "higher studies", "religion", "travel", "spirituality", "long trip"],
+    "10": ["career", "profession", "business", "promotion", "reputation", "status", "boss", "fame", "public life"],
+    "11": ["income", "gain", "profit", "salary", "friend", "network", "desire", "ambition"],
+    "12": ["foreign", "abroad", "loss", "expense", "isolation", "hospital", "sleep", "bed", "moksha", "jail"]
+  },
+
+  "planets": {
+    "Sun": ["sun", "surya", "ego", "father", "authority", "government", "soul", "vitality"],
+    "Moon": ["moon", "chandra", "mind", "emotion", "mental", "mother", "peace"],
+    "Mars": ["mars", "mangala", "anger", "property", "energy", "brother", "courage", "blood"],
+    "Mercury": ["mercury", "budha", "business", "logic", "trade", "coding", "speech", "intellect"],
+    "Jupiter": ["jupiter", "guru", "wealth", "husband", "wisdom", "luck", "teacher", "children"],
+    "Venus": ["venus", "shukra", "wife", "marriage", "luxury", "car", "art", "beauty", "comforts"],
+    "Saturn": ["saturn", "shani", "delay", "struggle", "job", "labor", "karma", "patience", "illness"],
+    "Rahu": ["rahu", "obsession", "foreign", "tech", "illusion", "crypto", "ai", "sudden rise"],
+    "Ketu": ["ketu", "detachment", "spirituality", "moksha", "past life", "research", "isolation"]
+  },
+
+  "kp_specific": {
+    "cusp_sub_lord": ["sub lord", "csl", "cuspal sub lord", "sublord", "house lord decision", "cusp sub"],
+    "star_lord": ["star lord", "nakshatra lord", "starlord", "star ruler"],
+    "significators": ["significator", "house significator", "kp significator", "ruling planets"],
+    "kp_cusps": ["kp chart", "kp cusps", "kp house", "cuspal position", "sub division"]
+  },
+
+  "divisional_charts": {
+    "d9": ["marriage", "spouse", "dharmanamsa", "navamsha", "second half of life"],
+    "d10": ["career", "dasamsha", "profession", "work environment", "achievement"]
+  },
+
+  "timeframe": ["when", "year", "now", "current", "timing", "transit", "dasha", "today", "present", "running period"]
+}

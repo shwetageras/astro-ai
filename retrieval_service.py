@@ -10,6 +10,11 @@ from vector_db import (
     query_qna_sl_embeddings,
 )
 
+from chart_data_mapper import (
+    map_chart_keywords,
+    build_mapped_retrieval_query,
+)
+
 
 def is_similar(text1, text2, threshold=0.8):
     words1 = set(text1.lower().split())
@@ -276,6 +281,21 @@ def retrieve_context(
 
     start_time = time.time()
 
+    # --------------------------------
+    # CHART DATA MAPPER
+    # --------------------------------
+    mapper_output = map_chart_keywords(question)
+
+    retrieval_query = build_mapped_retrieval_query(
+        question,
+        mapper_output
+    )
+
+    print("\n=== CHART DATA MAPPER ===")
+    print("Mapper output:", mapper_output)
+    print("Retrieval query:")
+    print(retrieval_query)
+
     chart_details = chart_details or []
     kb_ids = kb_ids or []
     sl_ids = sl_ids or []
@@ -435,7 +455,7 @@ def retrieve_context(
     embedding_start = time.perf_counter()
 
     query_embedding = generate_query_embedding(
-        question
+        retrieval_query
     )
 
     ttl_q_embedding = round(
