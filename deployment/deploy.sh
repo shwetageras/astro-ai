@@ -61,11 +61,6 @@ while IFS= read -r line; do
     SOURCE="${line%% -> *}"
     TARGET="${line#* -> }"
 
-    if [[ "$SOURCE" == "$TARGET" ]]; then
-        echo "ERROR: Invalid manifest line: $line"
-        exit 1
-    fi
-
     if [[ ! -f "$REPO_DIR/$SOURCE" ]]; then
         echo "ERROR: Source file missing: $REPO_DIR/$SOURCE"
         exit 1
