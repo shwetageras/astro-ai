@@ -21,3 +21,5 @@ kb/
 # Temporary files
 temp/
 tmp/
+# Local deployment verification sandbox
+.local-deploy/

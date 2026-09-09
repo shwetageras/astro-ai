@@ -1,0 +1,12 @@
+services/admin/api_admin.py -> api_admin.py
+services/admin/qna_generator.py -> qna_generator.py
+services/admin/admin_prompts.py -> admin_prompts.py
+services/admin/prompts.py -> prompts.py
+shared/db.py -> db.py
+shared/vector_db.py -> vector_db.py
+shared/openai_client.py -> openai_client.py
+shared/storage.py -> storage.py
+shared/kb_builder.py -> kb_builder.py
+shared/notifier.py -> notifier.py
+settings.py -> settings.py
+shared/embedder_client.py -> embedder_client.py

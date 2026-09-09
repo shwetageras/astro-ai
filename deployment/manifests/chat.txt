@@ -1,0 +1,8 @@
+services/chat/api_chat.py -> api_chat.py
+services/chat/chat_service.py -> chat_service.py
+services/chat/llm_client.py -> llm_client.py
+services/chat/retrieval_client.py -> retrieval_client.py
+shared/db.py -> db.py
+shared/vector_db.py -> vector_db.py
+shared/embedder_client.py -> embedder_client.py
+settings.py -> settings.py

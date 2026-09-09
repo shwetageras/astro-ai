@@ -1,0 +1,4 @@
+services/embedding/embedding_api.py -> embedding_api.py
+services/embedding/embedding_service.py -> embedding_service.py
+shared/openai_client.py -> openai_client.py
+settings.py -> settings.py
