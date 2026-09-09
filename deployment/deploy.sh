@@ -96,6 +96,13 @@ fi
 echo "Python compilation: OK"
 echo
 
+DRY_RUN="${DRY_RUN:-0}"
+
+if [[ "$DRY_RUN" == "1" ]]; then
+    echo "Dry run complete. No runtime files changed and no service restarted."
+    exit 0
+fi
+
 echo "--- Backing up current runtime files ---"
 
 sudo mkdir -p "$STATE_DIR"
