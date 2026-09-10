@@ -81,8 +81,6 @@ def map_chart_keywords(question: str) -> dict:
         "signs",
         "nakshatras",
         "dashas",
-        "transit",
-        "timeframe",
     ]:
 
         mappings = MASTER_MAP.get(category, {})
@@ -94,6 +92,18 @@ def map_chart_keywords(question: str) -> dict:
                 if _keyword_matches(question, keyword):
                     result[category].append(entity)
                     break
+
+
+    # ---------------------------------------------
+    # Transit
+    # ---------------------------------------------
+
+    transit_keywords = MASTER_MAP.get("transit", [])
+
+    for keyword in transit_keywords:
+
+        if _keyword_matches(question, keyword):
+            result["transit"].append(keyword)
 
     # ---------------------------------------------
     # Timeframe
