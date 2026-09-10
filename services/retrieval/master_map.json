@@ -34,8 +34,130 @@
   },
 
   "divisional_charts": {
-    "d9": ["marriage", "spouse", "dharmanamsa", "navamsha", "second half of life"],
-    "d10": ["career", "dasamsha", "profession", "work environment", "achievement"]
+    "d1": ["rashi", "birth chart", "overall life", "physical body", "general blueprint"],
+    "d2": ["hora", "wealth", "money", "family wealth", "assets distribution", "financial potential"],
+    "d3": ["drekkana", "siblings", "brothers", "sisters", "courage", "short journeys", "right side of body"],
+    "d4": ["chaturthamsha", "bhagyamsha", "property", "house", "land", "real estate", "destiny", "fixed assets"],
+    "d5": ["panchamsha", "children", "progeny", "creativity", "speculation", "past life credits", "intellect", "authority"],
+    "d6": ["shashthamsha", "health", "disease", "enemies", "obstacles", "debts", "accidents", "injuries", "service"],
+    "d7": ["saptamsha", "children", "grandchildren", "progeny success", "creative output", "partnership lineage"],
+    "d8": ["ashtamsha", "longevity", "sudden events", "accidents", "transformations", "hidden secrets", "chronic illnesses", "obstacles"],
+    "d9": ["navamsha", "marriage", "spouse", "dharmanamsa", "second half of life", "soul purpose", "inner strength"],
+    "d10": ["dasamsha", "career", "profession", "work environment", "achievement", "public status", "business success"],
+    "d11": ["rudramsha", "ekadasamsha", "gains", "destruction of evil", "losses and grief", "terminal illness"],
+    "d12": ["dwadashamsha", "parents", "ancestors", "lineage", "past roots", "secret sorrows", "foreign elements"],
+    "d16": ["shodashamsha", "kala", "vehicles", "conveyances", "luxuries", "happiness", "pleasures", "internal comforts"],
+    "d20": ["vimshamsha", "spiritual progress", "devotion", "religion", "worship", "inner growth", "religious acts"],
+    "d24": ["siddhamsha", "chaturvimshamsha", "education", "learning", "knowledge", "skills", "academic success", "siddhis"],
+    "d27": ["bhamsha", "nakshatramsha", "strengths and weaknesses", "physical strength", "inherent character traits"],
+    "d30": ["trishamsha", "misfortunes", "evils", "diseases", "miseries", "accidents", "character flaws", "punishments"],
+    "d40": ["khavedamsha", "auspicious and inauspicious effects", "matrilineal heritage", "inherited traits"],
+    "d45": ["akshavedamsha", "general well-being", "all matters of life", "character", "conduct", "patrilineal traits"],
+    "d60": ["shashtiamsha", "past life karma", "deepest karmic blueprint", "overall destiny", "fine-tuned past life results"]
+  },
+
+  "signs": {
+    "aries": [
+      "aries", "mesh", "1st sign", "mars sign", "fire sign", "pioneer", "head", "impulse", "action", 
+      "self-start projects", "leadership", "physical vitality", "headaches", "sports", "competitiveness"
+    ],
+    "taurus": [
+      "taurus", "vrishabh", "2nd sign", "venus sign", "earth sign", "throat", "material comfort", "stability", 
+      "accumulated wealth", "food and eating habits", "singing/voice quality", "fixed assets", "stubbornness"
+    ],
+    "gemini": [
+      "gemini", "mithun", "3rd sign", "mercury sign", "air sign", "dual nature", "hands", "nervous system", 
+      "multitasking", "commerce", "networking", "short travel", "writing and publishing", "sibling dynamics"
+    ],
+    "cancer": [
+      "cancer", "kark", "4th sign", "moon sign", "water sign", "chest", "emotions", "nurturing", "home-maker",
+      "emotional security", "real estate buying", "motherly bond", "public relations", "food industry"
+    ],
+    "leo": [
+      "leo", "singh", "5th sign", "sun sign", "fire sign", "heart", "royalty", "charisma", "pride", 
+      "government administration", "fame and recognition", "high-level authority", "creative direction", "heart health"
+    ],
+    "virgo": [
+      "virgo", "kanya", "6th sign", "mercury sign", "earth sign", "abdomen", "analytical", "perfectionist",
+      "accounting and auditing", "medical/healing service", "daily routine management", "pet care", "conflict resolution"
+    ],
+    "libra": [
+      "libra", "tula", "7th sign", "venus sign", "air sign", "kidneys", "balance", "justice", "partnership",
+      "legal agreements", "public dealing", "artistic design", "client relationships", "marriage negotiations"
+    ],
+    "scorpio": [
+      "scorpio", "vrishchik", "8th sign", "mars sign", "water sign", "reproductive organs", "secrets", "intensity",
+      "scientific research", "insurance and taxation", "mystical occult studies", "crisis management", "surgery"
+    ],
+    "sagittarius": [
+      "sagittarius", "dhanu", "9th sign", "jupiter sign", "fire sign", "thighs", "philosophy", "higher vision",
+      "higher education / university", "publishing books", "long-distance pilgrimage", "legal judiciary", "mentorship"
+    ],
+    "capricorn": [
+      "capricorn", "makar", "10th sign", "saturn sign", "earth sign", "knees", "ambition", "discipline", "structure",
+      "corporate management", "government bureaucracy", "large-scale enterprise", "long-term career execution", "hard labor"
+    ],
+    "aquarius": [
+      "aquarius", "kumbh", "11th sign", "saturn sign", "air sign", "calves", "innovation", "humanitarian", "network",
+      "community building", "social welfare networks", "advanced technology / AI", "future-forward planning", "large organizational gains"
+    ],
+    "pisces": [
+      "pisces", "meen", "12th sign", "jupiter sign", "water sign", "feet", "spirituality", "imagination", "dissolution",
+      "multinational or foreign settlements", "hospitals and ashrams", "deep meditation", "charitable work", "cinematic/abstract arts"
+    ]
+  },
+
+  "nakshatras": {
+    "ashwini": ["ashwini", "ashwinis", "ketu nakshatra", "healing", "speed", "quick action"],
+    "bharani": ["bharani", "venus nakshatra", "restraint", "transformation", "fertility"],
+    "krittika": ["krittika", "sun nakshatra", "sharp", "fire", "cutting edge", "criticism"],
+    "rohini": ["rohini", "moon nakshatra", "growth", "material creation", "beauty", "agriculture"],
+    "mrigashira": ["mrigashira", "mrigashirsha", "mars nakshatra", "searching", "exploration", "curiosity"],
+    "ardra": ["ardra", "rahu nakshatra", "storm", "tears", "destruction to rebuild", "technology"],
+    "punarvasu": ["punarvasu", "jupiter nakshatra", "return of light", "repetition", "recovery"],
+    "pushya": ["pushya", "saturn nakshatra", "nourishment", "most auspicious", "protection"],
+    "ashlesha": ["ashlesha", "mercury nakshatra", "serpent", "hypnotism", "psychology", "secrets"],
+    "magha": ["magha", "ketu nakshatra", "ancestors", "royal lineage", "heritage", "authority"],
+    "purva_phalguni": ["purva phalguni", "pubba", "venus nakshatra", "relaxation", "luxury", "romance", "arts"],
+    "uttara_phalguni": ["uttara phalguni", "sun nakshatra", "patronage", "contracts", "friendships", "social support"],
+    "hasta": ["hasta", "moon nakshatra", "hand skills", "craftsmanship", "dexterity", "healing touch"],
+    "chitra": ["chitra", "mars nakshatra", "architecture", "design", "brilliance", "fashion"],
+    "swati": ["swati", "rahu nakshatra", "independence", "flexibility", "trade", "wind energy"],
+    "vishakha": ["vishakha", "jupiter nakshatra", "goal-oriented", "determination", "focused ambition"],
+    "anuradha": ["anuradha", "saturn nakshatra", "friendship", "devotion", "working in foreign lands"],
+    "jyeshtha": ["jyeshtha", "mercury nakshatra", "seniority", "protection", "crisis management", "chief"],
+    "mula": ["mula", "mool", "ketu nakshatra", "root cause", "investigation", "uprooting and restarting"],
+    "purva_ashadha": ["purva ashadha", "venus nakshatra", "invincible", "water element", "public speech"],
+    "uttara_ashadha": ["uttara ashadha", "sun nakshatra", "ultimate victory", "permanent achievements", "ethics"],
+    "shravana": ["shravana", "moon nakshatra", "listening", "learning", "tradition", "auditory media"],
+    "dhanistha": ["dhanistha", "dhanishta", "mars nakshatra", "wealth", "music", "percussion", "real estate"],
+    "satabhisha": ["satabhisha", "shatabhisha", "rahu nakshatra", "medicine", "healing herbs", "secrecy", "astronomy"],
+    "purva_bhadrapada": ["purva bhadrapada", "jupiter nakshatra", "fire and water", "intensity", "radical transformation"],
+    "uttara_bhadrapada": ["uttara bhadrapada", "saturn nakshatra", "controlled passion", "philanthropy", "inner peace"],
+    "revati": ["revati", "mercury nakshatra", "wealth protection", "safe journey", "completion", "animal welfare"]
+  },
+
+  "dashas": {
+    "mahadasha": ["major period", "maha dasha", "long term phase", "major life chapter", "planet ruling period", "major cycle"],
+    "antardasha": ["bhukti", "sub period", "nested period", "inner cycle", "sub-lord", "chapter within chapter"],
+    "pratyantardasha": ["sub-sub period", "pratyantar", "micro phase", "short term shift"],
+    "sooksham_dasha": ["sookshma", "sub-sub-sub period", "fine tuning", "micro timing"],
+    "prana_dasha": ["prana", "vital phase", "deepest micro period", "instant activation"]
+  },
+
+  "transit": [
+    "transit", "gochar", "current movement", "planetary position today", "live sky", 
+    "moving planets", "current skies", "real-time transit", "ashtakavarga", "retrograde", 
+    "direct motion", "ingress", "planet change sign", "sade sati", "dhaiya"
+  ],
+
+  "panchang": {
+    "tithi": ["tithi", "lunar day", "moon phase", "ekadashi", "purnima", "amavasya", "paksha"],
+    "vaar": ["vaar", "vara", "weekday", "day of week", "solar day"],
+    "nakshatra": ["panchang nakshatra", "birth star", "constellation of day"],
+    "yoga": ["panchang yoga", "auspicious yoga", "vishkumbha", "shubha", "vyatipata"],
+    "karana": ["karana", "half tithi", "bava", "balava", "vishti", "bhadra"],
+    "muhurta": ["muhurta", "auspicious time", "good time", "abhijit muhurta", "rahukalam", "yamaganda", "gulika"]
   },
 
   "timeframe": ["when", "year", "now", "current", "timing", "transit", "dasha", "today", "present", "running period"]
