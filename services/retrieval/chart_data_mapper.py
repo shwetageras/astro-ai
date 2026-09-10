@@ -57,6 +57,10 @@ def map_chart_keywords(question: str) -> dict:
         "planets": [],
         "kp_specific": [],
         "divisional_charts": [],
+        "signs": [],
+        "nakshatras": [],
+        "dashas": [],
+        "transit": [],
         "timeframe": [],
     }
 
@@ -74,6 +78,10 @@ def map_chart_keywords(question: str) -> dict:
         "planets",
         "kp_specific",
         "divisional_charts",
+        "signs",
+        "nakshatras",
+        "dashas",
+        "transit",
     ]:
 
         mappings = MASTER_MAP.get(category, {})
@@ -149,6 +157,30 @@ def build_mapped_retrieval_query(
         parts.append(
             "Relevant divisional charts: "
             + ", ".join(mapper_output["divisional_charts"])
+        )
+
+    if mapper_output.get("signs"):
+        parts.append(
+            "Relevant signs: "
+            + ", ".join(mapper_output["signs"])
+        )
+
+    if mapper_output.get("nakshatras"):
+        parts.append(
+            "Relevant nakshatras: "
+            + ", ".join(mapper_output["nakshatras"])
+        )
+
+    if mapper_output.get("dashas"):
+        parts.append(
+            "Relevant dashas: "
+            + ", ".join(mapper_output["dashas"])
+        )
+
+    if mapper_output.get("transit"):
+        parts.append(
+            "Relevant transit concepts: "
+            + ", ".join(mapper_output["transit"])
         )
 
     if mapper_output.get("timeframe"):
