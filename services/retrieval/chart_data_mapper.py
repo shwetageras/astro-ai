@@ -82,6 +82,7 @@ def map_chart_keywords(question: str) -> dict:
         "nakshatras",
         "dashas",
         "transit",
+        "timeframe",
     ]:
 
         mappings = MASTER_MAP.get(category, {})
