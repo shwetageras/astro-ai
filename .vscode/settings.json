@@ -1,7 +1,14 @@
 {
     "python.defaultInterpreterPath": "venv\\Scripts\\python.exe",
     "python.analysis.extraPaths": [
-        ".\\venv\\Lib\\site-packages"
+        ".\\venv\\Lib\\site-packages",
+        ".\\services\\chat",
+        ".\\services\\retrieval",
+        ".\\services\\llm",
+        ".\\services\\embedding",
+        ".\\services\\chart",
+        ".\\services\\admin",
+        ".\\shared"
     ],
     "python.analysis.autoImportCompletions": true,
     "python.analysis.typeCheckingMode": "basic"

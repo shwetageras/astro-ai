@@ -8,6 +8,7 @@ from chat_service import (
     welcome_message_service,
     qna_sl_search_service,
     process_question,
+    retrieval_test_service,
 )
 
 from llm_client import (
@@ -91,12 +92,6 @@ class RetrievalTestRequest(BaseModel):
     previous_question: Optional[str] = None
     previous_answer: Optional[str] = None
 
-    include_chart: bool = True
-    include_kb: bool = True
-    include_sl: bool = True
-
-    top_k: int = 20
-
 
 # ----------------------------------
 # ACTIVE ENDPOINTS
@@ -141,6 +136,10 @@ def qna_gemini(request: QuestionRequest):
         answer_generator=generate_answer_gemini,
         source_name="gemini-2.5-flash",
     )
+
+@app.post("/retrieval_test")
+def retrieval_test(request: RetrievalTestRequest):
+    return retrieval_test_service(request)
 
 @app.post("/welcome_message")
 def welcome_message(request: WelcomeRequest):

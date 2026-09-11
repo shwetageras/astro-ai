@@ -347,6 +347,71 @@ def qna_sl_search_service(question, kb_id):
     }
 
 
+def retrieval_test_service(request):
+
+    chart_ids = request.chart_ids
+    kb_ids = request.kb_id
+
+    # normalize safely
+    if isinstance(kb_ids, str):
+        kb_ids = [kb_ids]
+    elif not isinstance(kb_ids, list):
+        kb_ids = []
+
+    use_chart = chart_ids and chart_ids != ["0"] and chart_ids != [""]
+
+    use_kb = kb_ids and kb_ids != ["0"] and kb_ids != [""]
+
+    chart_details = []
+
+    # Same chart lookup used by process_question().
+    # No QNA record is created here.
+    if use_chart:
+        chart_details = get_chart_details_bulk(chart_ids)
+
+    chart_details_for_retrieval = [
+        {
+            "user_id": str(chart["user_id"]),
+            "profile_id": chart["profile_id"],
+            "chart_id": str(chart["chart_id"]),
+        }
+        for chart in chart_details
+    ]
+
+    retrieval_start = time.perf_counter()
+
+    # Use the exact production retrieval client.
+    # This endpoint deliberately stops before the LLM call.
+    retrieval_result = retrieve_context(
+        question=request.question,
+        chart_details=chart_details_for_retrieval,
+        kb_ids=kb_ids,
+        sl_ids=request.sl_id,
+        previous_question=request.previous_question,
+        previous_answer=request.previous_answer,
+    )
+
+    ttl_retrieval = round(
+        (time.perf_counter() - retrieval_start) * 1000,
+        2
+    )
+
+    context = retrieval_result.get("context", "")
+
+    return {
+        "question": request.question,
+        "chart_ids": chart_ids,
+        "kb_id": kb_ids,
+        "sl_id": request.sl_id,
+        "used_sl": retrieval_result.get("used_sl", False),
+        "used_kb": retrieval_result.get("used_kb", use_kb),
+        "used_chart": retrieval_result.get("used_chart", bool(use_chart)),
+        "rttl": retrieval_result.get("rttl", ttl_retrieval),
+        "c_ttl": retrieval_result.get("c_ttl", []),
+        "context": context,
+    }
+
+
 def process_question(
     request,
     answer_generator,
