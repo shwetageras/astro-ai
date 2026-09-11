@@ -2,6 +2,11 @@
 set -euo pipefail
 
 SERVICE="${1:-}"
+DRY_RUN="${DRY_RUN:-0}"
+
+if [[ "${2:-}" == "--dry-run" ]]; then
+    DRY_RUN="1"
+fi
 
 REPO_DIR="${REPO_DIR:-/home/ubuntu/astro-ai-split}"
 APP_DIR="${APP_DIR:-/home/ubuntu/astro-ai}"
@@ -90,8 +95,6 @@ fi
 
 echo "Python compilation: OK"
 echo
-
-DRY_RUN="${DRY_RUN:-0}"
 
 if [[ "$DRY_RUN" == "1" ]]; then
     echo "Dry run complete. No runtime files changed and no service restarted."
